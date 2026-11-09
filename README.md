@@ -1,12 +1,47 @@
 # StepsToCase
 
-A Chrome extension (Manifest V3) that records a manual test in the browser and turns it into a readable test case and a structured JSON file for generating automated tests.
+**Record a manual test once. Get a readable test case and the data to generate automated tests.**
 
-- **Documentation:** https://eotsevych.github.io/steps-to-case/
-- **Privacy policy:** https://eotsevych.github.io/steps-to-case/privacy
-- **Chrome Web Store:** pending review
+StepsToCase is a Chrome extension for QA engineers. You walk through a test in the browser as usual; the extension records every step with the exact element details, and exports a clean test case plus a JSON file that an AI coding agent can turn into Playwright, Cypress or Selenium tests, without guessing selectors.
 
-All recorded data stays in the browser (`chrome.storage.local`). Nothing is sent to any server.
+<p>
+  <a href="https://eotsevych.github.io/steps-to-case/"><strong>📖 Documentation & video guide</strong></a>
+  &nbsp;·&nbsp;
+  <a href="CHROME_WEB_STORE_URL"><strong>🧩 Install from the Chrome Web Store</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://eotsevych.github.io/steps-to-case/privacy">🔒 Privacy policy</a>
+</p>
+
+![Recording a test with StepsToCase](docs/media/01_action_recording.gif)
+
+## Why
+
+- **Manual test cases get vague.** Steps written in a hurry are hard to follow a month later. A recording is exact: every click, value and page.
+- **The first manual run is wasted for automation.** StepsToCase collects the automation data while you test, so the same run feeds both the test case and the automated test.
+- **AI guesses locators.** Give an AI a five-line prompt and it invents selectors. Give it the recorded JSON and it works from real element attributes, containers and page structure.
+
+## How it works
+
+1. **Record.** Open the side panel, name the test and click **Start Recording**. Clicks, typing, selects, checkboxes and key presses become steps. Steps are grouped by page automatically.
+2. **Add context.** Add assertions, manual steps and preconditions. Pick a **container** (a table row, card or dialog) when the same button appears many times on the page.
+3. **Organize.** Rename, reorder or delete steps, and merge several clicks into one business step.
+4. **Export.** Get an AI prompt, a ready-made readable test case, and a JSON file with every page, step, element and container.
+5. **Generate tests.** Hand the JSON to your AI coding agent with your framework's rules, then let it run and fix the test until it passes.
+
+Each step is covered in detail, with short videos, in the **[documentation](https://eotsevych.github.io/steps-to-case/)**.
+
+## Features
+
+- Records click, double click, fill, press, select, check and uncheck
+- Follows the flow across pages, popups, new tabs and iframes
+- Assertions: text equals / contains, visible, hidden, enabled, disabled, checked, unchecked
+- Containers to make repeated elements unique
+- Scored CSS selectors with configurable attribute priority (`data-testid`, `id`, `data-*`, …)
+- Page and component tags for Page Object Model code generation
+- Single Page mode for building one page object
+- Records the API calls each step triggers, so generated tests can wait on them
+- Password values are masked
+- Everything stays in your browser (`chrome.storage.local`). Nothing is sent to any server.
 
 ## Build from source
 
@@ -18,9 +53,9 @@ npm run typecheck    # tsc --noEmit
 npm test             # unit tests (vitest)
 ```
 
-Load it in Chrome: open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and select `dist/`.
+Load it in Chrome: open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and select `dist/`.
 
-## How it is built
+## How the code is organized
 
 Three entry points, built by Vite:
 
@@ -40,11 +75,7 @@ Content script ──ACTION_CAPTURED──► Service worker ──STATE_UPDATED
                ◄──START / STOP────                 ◄──panel commands──
 ```
 
-`@/*` maps to `src/*` (in `tsconfig.json` and `vite.config.ts`).
-
-## Documentation site
-
-The wiki lives in `docs/` and is published with GitHub Pages.
+`@/*` maps to `src/*` (in `tsconfig.json` and `vite.config.ts`). The documentation site lives in `docs/` and is published with GitHub Pages.
 
 ## License
 
