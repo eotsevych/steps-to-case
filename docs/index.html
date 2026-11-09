@@ -1,0 +1,2382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steps to Case — Documentation & Wiki (EN / UA)</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --sidebar-bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #212529;
+      --text-muted: #6c757d;
+      --border: #e9ecef;
+      --border-focus: #4dabf7;
+      --accent: #228be6;
+      --accent-light: #e7f5ff;
+      --code-bg: #f1f3f5;
+      --callout-bg: #f8f9fa;
+      --table-header: #f1f3f5;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --radius: 8px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #141517;
+      --sidebar-bg: #1a1b1e;
+      --card-bg: #1f2023;
+      --text: #c1c2c5;
+      --text-muted: #909296;
+      --border: #2c2e33;
+      --border-focus: #339af0;
+      --accent: #339af0;
+      --accent-light: #18283a;
+      --code-bg: #25262b;
+      --callout-bg: #1f2023;
+      --table-header: #25262b;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Bilingual display rules */
+    body[data-lang="en"] .lang-ua { display: none !important; }
+    body[data-lang="ua"] .lang-en { display: none !important; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Top Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      width: 0%;
+      z-index: 999;
+      transition: width 0.1s;
+    }
+
+    /* Top Header */
+    header.wiki-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 60px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Language Switcher */
+    .lang-switcher {
+      display: flex;
+      background: var(--sidebar-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .lang-btn.active {
+      background: var(--card-bg);
+      color: var(--accent);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Search Input */
+    .search-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--sidebar-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-btn:hover {
+      border-color: var(--border-focus);
+      color: var(--text);
+    }
+    .search-btn kbd {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 10px;
+    }
+
+    /* Theme Toggle */
+    .icon-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+    .icon-btn:hover {
+      background: var(--sidebar-bg);
+    }
+
+    .menu-btn {
+      display: none;
+    }
+
+    /* Wiki Container */
+    .wiki-container {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Left Sidebar */
+    aside.wiki-sidebar {
+      width: 280px;
+      border-right: 1px solid var(--border);
+      background: var(--sidebar-bg);
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      padding: 20px 16px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin: 16px 0 8px 10px;
+    }
+
+    .nav-list {
+      list-style: none;
+    }
+
+    .nav-item {
+      margin-bottom: 2px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .nav-link:hover {
+      background: var(--card-bg);
+      color: var(--accent);
+    }
+    .nav-link.active {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .nav-link-num {
+      font-size: 12px;
+      color: var(--text-muted);
+      width: 16px;
+    }
+
+    /* Main Content */
+    main.wiki-content {
+      flex: 1;
+      min-width: 0;
+      padding: 40px 48px;
+    }
+
+    /* Right TOC Sidebar */
+    aside.wiki-toc {
+      width: 240px;
+      padding: 40px 20px;
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+
+    .toc-title {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .toc-links {
+      list-style: none;
+    }
+    .toc-links li {
+      margin-bottom: 8px;
+    }
+    .toc-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+      display: block;
+      line-height: 1.4;
+    }
+    .toc-links a:hover, .toc-links a.active {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Typography & Content Elements */
+    .hero-banner {
+      background: linear-gradient(135deg, #228be6 0%, #15aabf 100%);
+      color: #ffffff;
+      padding: 32px;
+      border-radius: var(--radius);
+      margin-bottom: 40px;
+      box-shadow: var(--shadow);
+    }
+    .hero-banner h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .hero-banner p {
+      font-size: 16px;
+      opacity: 0.95;
+      max-width: 720px;
+    }
+
+    .section-block {
+      margin-bottom: 64px;
+      scroll-margin-top: 80px;
+    }
+
+    h2.module-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    h3.sub-title {
+      font-size: 19px;
+      font-weight: 600;
+      margin: 24px 0 10px 0;
+      color: var(--text);
+      scroll-margin-top: 80px;
+    }
+
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 16px 0 6px 0;
+    }
+
+    p {
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 16px;
+      font-size: 15px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .tldr-card {
+      background: var(--callout-bg);
+      border-left: 4px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .tldr-card strong {
+      color: var(--accent);
+    }
+
+    /* Media Card */
+    .media-card {
+      margin: 20px 0 28px 0;
+      background: #000000;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .media-header {
+      background: var(--sidebar-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .media-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Callouts */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      background: var(--callout-bg);
+      border: 1px solid var(--border);
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .callout.tip { border-left: 4px solid #40c057; }
+    .callout.warning { border-left: 4px solid #fab005; }
+    .callout.info { border-left: 4px solid var(--accent); }
+    .callout-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+    .callout-content { flex: 1; }
+
+    /* Tables */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 18px 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--table-header);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Code Blocks */
+    .code-wrapper {
+      position: relative;
+      margin: 16px 0;
+    }
+
+    pre code {
+      display: block;
+      background: var(--code-bg);
+      padding: 14px;
+      border-radius: var(--radius);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      line-height: 1.5;
+      border: 1px solid var(--border);
+    }
+
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    /* Search Modal */
+    .search-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 100px;
+    }
+    .search-modal.open {
+      display: flex;
+    }
+
+    .search-box {
+      width: 100%;
+      max-width: 580px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    .search-box-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+
+    .search-box-header input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .search-results {
+      max-height: 360px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .search-item {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .search-item:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .search-item-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .search-item-preview {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 1080px) {
+      aside.wiki-toc { display: none; }
+      main.wiki-content { padding: 32px 24px; }
+    }
+
+    @media (max-width: 768px) {
+      .menu-btn { display: flex; }
+      aside.wiki-sidebar {
+        position: fixed;
+        left: -280px;
+        top: 60px;
+        z-index: 200;
+        transition: left 0.2s;
+        box-shadow: var(--shadow);
+      }
+      aside.wiki-sidebar.open {
+        left: 0;
+      }
+      main.wiki-content { padding: 24px 16px; }
+      .search-btn span { display: none; }
+    }
+  </style>
+</head>
+<body data-theme="light" data-lang="en">
+
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="wiki-header">
+    <div class="header-left">
+      <button class="icon-btn menu-btn" id="toggle-sidebar" aria-label="Toggle Navigation">☰</button>
+      <div class="brand-icon">🧪</div>
+      <div class="brand-title">
+        <span class="lang-en">Steps to Case Wiki</span>
+        <span class="lang-ua">Steps to Case Вікі</span>
+      </div>
+      <span class="brand-badge">
+        <span class="lang-en">Official Docs</span>
+        <span class="lang-ua">Офіційна Документація</span>
+      </span>
+    </div>
+
+    <div class="header-right">
+      <!-- Language Switcher -->
+      <div class="lang-switcher">
+        <button class="lang-btn active" id="btn-lang-en">🇬🇧 EN</button>
+        <button class="lang-btn" id="btn-lang-ua">🇺🇦 UA</button>
+      </div>
+
+      <!-- Search Trigger -->
+      <button class="search-btn" id="open-search">
+        <span class="lang-en">🔍 Search docs...</span>
+        <span class="lang-ua">🔍 Пошук у вікі...</span>
+        <kbd>Ctrl+K</kbd>
+      </button>
+
+      <!-- Theme Switcher -->
+      <button class="icon-btn" id="toggle-theme" title="Toggle Dark/Light Mode">🌓</button>
+    </div>
+  </header>
+
+  <div class="wiki-container">
+
+    <!-- Left Navigation Sidebar -->
+    <aside class="wiki-sidebar" id="sidebar">
+      <div class="sidebar-section-title">
+        <span class="lang-en">Navigation</span>
+        <span class="lang-ua">Навігація</span>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a href="#sec-start" class="nav-link">
+            <span class="nav-link-num">0</span>
+            <span class="lang-en">Getting Started</span>
+            <span class="lang-ua">Початок роботи</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-1" class="nav-link active">
+            <span class="nav-link-num">1</span>
+            <span class="lang-en">Introduction & Philosophy</span>
+            <span class="lang-ua">Вступ та Філософія</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-2" class="nav-link">
+            <span class="nav-link-num">2</span>
+            <span class="lang-en">Recording & Capturing</span>
+            <span class="lang-ua">Запис дій користувача</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-3" class="nav-link">
+            <span class="nav-link-num">3</span>
+            <span class="lang-en">Assertions & Containers</span>
+            <span class="lang-ua">Перевірки та Контейнери</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-4" class="nav-link">
+            <span class="nav-link-num">4</span>
+            <span class="lang-en">Organizing & Editing</span>
+            <span class="lang-ua">Організація та Редагування</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-5" class="nav-link">
+            <span class="nav-link-num">5</span>
+            <span class="lang-en">Exporting Content</span>
+            <span class="lang-ua">Експорт тестів та JSON</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-code" class="nav-link">
+            <span class="nav-link-num">6</span>
+            <span class="lang-en">Automation Code</span>
+            <span class="lang-ua">Генерація автотестів</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-6" class="nav-link">
+            <span class="nav-link-num">7</span>
+            <span class="lang-en">Options & Settings</span>
+            <span class="lang-ua">Налаштування та Алгоритми</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#sec-help" class="nav-link">
+            <span class="nav-link-num">8</span>
+            <span class="lang-en">Privacy & Troubleshooting</span>
+            <span class="lang-ua">Приватність та Проблеми</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-section-title">
+        <span class="lang-en">Quick Links</span>
+        <span class="lang-ua">Швидкі посилання</span>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a href="#golden-mean" class="nav-link">
+            <span class="lang-en">⚖️ The Golden Mean</span>
+            <span class="lang-ua">⚖️ Золота середина</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#step-types" class="nav-link">
+            <span class="lang-en">📋 Four Step Types</span>
+            <span class="lang-ua">📋 4 типи кроків</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#container-nav" class="nav-link">
+            <span class="lang-en">🔲 Containers Navigation</span>
+            <span class="lang-ua">🔲 Навігація контейнерами</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#heal-loop" class="nav-link">
+            <span class="lang-en">🔁 Generate → Run → Heal</span>
+            <span class="lang-ua">🔁 Генерація → Запуск → Лікування</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#scoring-table" class="nav-link">
+            <span class="lang-en">🔢 Locator Scoring</span>
+            <span class="lang-ua">🔢 Оцінка селекторів</span>
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="wiki-content">
+
+      <!-- Hero Header -->
+      <div class="hero-banner">
+        <div class="lang-en">
+          <h1>Steps to Case Wiki</h1>
+          <p>Complete documentation and video guide for the Steps to Case extension. Eliminate vague manual test cases and capture clean automation data organically.</p>
+        </div>
+        <div class="lang-ua">
+          <h1>Steps to Case Вікі</h1>
+          <p>Повна документація та відеоінструкція для розширення Steps to Case. Позбудьтеся абстрактних тесткейсів та збирайте точні дані для автоматизації під час ручного тестування.</p>
+        </div>
+      </div>
+
+      <!-- ================= Module 0 ================= -->
+      <section class="section-block" id="sec-start">
+        <div class="lang-en">
+          <h2 class="module-title">0. Getting Started</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            Install the extension, pin it, and click its icon. The whole UI opens in the Chrome side panel. Name your test and start recording.
+          </div>
+
+          <h3 class="sub-title">Getting Started Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>00_getting_started.gif</span><span>Timestamp: 00:00 - 00:11</span></div>
+            <img loading="lazy" src="media/00_getting_started.gif" alt="Getting Started">
+          </div>
+
+          <h3 class="sub-title">Install & Open</h3>
+          <ol>
+            <li>Install <strong>StepsToCase</strong> from the Chrome Web Store and pin it to the toolbar.</li>
+            <li>Open the site you want to test, then click the extension icon. The side panel opens on the right.</li>
+            <li>Need more room? Use the window toggle in the panel header to move the panel into a separate <strong>picture-in-picture window</strong>, and back.</li>
+          </ol>
+
+          <h3 class="sub-title">The Start Screen</h3>
+          <ul>
+            <li><strong>Test name and description:</strong> they go into the export and the generated test case.</li>
+            <li><strong>Start Recording:</strong> records a full flow across pages (see section 2).</li>
+            <li><strong>Record Single Page:</strong> collects steps for one page only, to build a page object (see section 2).</li>
+            <li><strong>Upload JSON File:</strong> opens a recording you exported earlier, so you can keep editing it.</li>
+          </ul>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">0. Початок роботи</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Встановіть розширення, закріпіть його та натисніть на іконку. Увесь інтерфейс відкривається в боковій панелі Chrome. Дайте тесту назву і почніть запис.
+          </div>
+
+          <h3 class="sub-title">Відеодемонстрація: Початок роботи</h3>
+          <div class="media-card">
+            <div class="media-header"><span>00_getting_started.gif</span><span>Таймкод: 00:00 - 00:11</span></div>
+            <img loading="lazy" src="media/00_getting_started.gif" alt="Getting Started">
+          </div>
+
+          <h3 class="sub-title">Встановлення та запуск</h3>
+          <ol>
+            <li>Встановіть <strong>StepsToCase</strong> з Chrome Web Store і закріпіть його на панелі інструментів.</li>
+            <li>Відкрийте сайт, який тестуєте, і натисніть на іконку розширення. Праворуч відкриється бокова панель.</li>
+            <li>Бракує місця? Кнопка у шапці панелі переносить її в окреме <strong>вікно «картинка в картинці»</strong> і назад.</li>
+          </ol>
+
+          <h3 class="sub-title">Стартовий екран</h3>
+          <ul>
+            <li><strong>Назва та опис тесту:</strong> потрапляють в експорт і в згенерований тесткейс.</li>
+            <li><strong>Start Recording:</strong> записує повний сценарій через кілька сторінок (див. розділ 2).</li>
+            <li><strong>Record Single Page:</strong> збирає кроки лише однієї сторінки для побудови Page Object (див. розділ 2).</li>
+            <li><strong>Upload JSON File:</strong> відкриває раніше експортований запис, щоб продовжити його редагування.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ================= Module 1 ================= -->
+      <section class="section-block" id="sec-1">
+        <div class="lang-en">
+          <h2 class="module-title">1. Introduction & Core Philosophy</h2>
+          <div class="tldr-card">
+            <strong>TL;DR (Too Long; Didn't Read. A short summary):</strong>
+            Steps to Case removes vague manual test cases. It lowers test costs. It records automation data during your first manual test. It makes test automation simple for everyone.
+          </div>
+
+          <h3 class="sub-title">Why It Was Built</h3>
+          <p>This tool solves three main problems in software testing:</p>
+
+          <h4>1. The "Ignored Test Case" Problem</h4>
+          <p>Teams often write manual test cases only to check a box. People write them too fast in vague words. After one month, nobody knows what the test means. New team members get confused by unclear project words.</p>
+          <p>Steps to Case solves this with <strong>Executable Specifications</strong>. Executable specifications are exact step-by-step records of user actions. Each action maps directly into automated code.</p>
+
+          <h4>2. The High Cost of Testing</h4>
+          <p>Teams run one test case many times: exploratory tests, bug fix checks, regression tests, and automation learning.</p>
+          <p>With Steps to Case, your first manual test captures automation data as a byproduct. This improves your ROI (Return on Investment. The profit gained compared to money spent). Every next run saves time.</p>
+
+          <h4>3. High Entry Barrier to Automation</h4>
+          <p>Writing application code with AI (Artificial Intelligence. Computers that generate text or code) can be risky. Writing test code with AI is safer. Tests give a fast feedback loop. If the test passes, the code works. If the test fails, the code is broken.</p>
+
+          <h3 class="sub-title" id="golden-mean" data-target-id="golden-mean">The "Golden Mean" Philosophy (Video Insight)</h3>
+          <p>The tool acts as the <strong>golden mean</strong> between two weak approaches:</p>
+
+          <div class="code-wrapper">
+            <pre><code>[Autonomous Browser Agent] &lt;----- [ Steps to Case ] -----&gt; [ Vague 5-Line Prompt ]
+(Gets lost, slow, breaks)       (The Golden Mean)         (Hallucinates locators)</code></pre>
+          </div>
+
+          <ul>
+            <li><strong>Approach A (Autonomous AI Agents):</strong> The agent explores pages by itself. It gets lost on complex screens, wastes tokens, and breaks easily.</li>
+            <li><strong>Approach B (Vague Five-Line Prompts):</strong> The user writes five short lines. The AI guesses DOM selectors. The test fails immediately. DOM means Document Object Model. This is the tree layout of web page elements.</li>
+            <li><strong>The Steps to Case Approach:</strong> A human performs the exact path. The extension records exact DOM attributes and relationships. The AI uses this data to write solid code.</li>
+          </ul>
+          <p>The payoff of this approach is the <a href="#heal-loop">generate → run → heal loop</a> in section 6: because a human already proved the path works, the AI can fix its own generated test without supervision.</p>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">1. Вступ та головна філософія</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Steps to Case прибирає незрозумілі ручні тесткейси. Інструмент знижує витрати на тестування. Він записує дані для автоматизації під час першого ручного тесту. Він робить автотести доступними для кожного.
+          </div>
+
+          <h3 class="sub-title">Навіщо це створено</h3>
+          <p>Додаток вирішує три головні проблеми тестування:</p>
+
+          <h4>1. Проблема "забутого тесткейсу"</h4>
+          <p>Тесткейси часто пишуть поспіхом, лише для галочки. Вони написані надто абстрактно. Через місяць ніхто не може зрозуміти, що цей тест робить і як його пройти. Нові люди в команді не знають внутрішнього сленгу проєкту.</p>
+          <p>Steps to Case вирішує це через <strong>Виконувані Специфікації</strong> (Executable Specifications). Це точний покроковий запис дій, який напряму стає автоматизованим кодом.</p>
+
+          <h4>2. Висока вартість тестування</h4>
+          <p>Один тесткейс проходять кілька разів: перший тест, перевірка після виправлення багів, регресійне тестування та написання автотесту.</p>
+          <p>З Steps to Case дані для автоматизації збираються одразу як побічний результат ручного проходження. Це суттєво підвищує ROI (Return on Investment. Показник окупності витрат). Кожен наступний запуск економить час.</p>
+
+          <h4>3. Високий поріг входу в автоматизацію</h4>
+          <p>Писати код додатку за допомогою AI (Artificial Intelligence. Штучний інтелект) буває ризиковано. Писати тестовий код за допомогою AI набагато безпечніше. Тести дають швидку перевірку: зелений тест означає, що все працює, червоний — що є помилка.</p>
+
+          <h3 class="sub-title" data-target-id="golden-mean">Філософія "Золотої середини" (Інсайт з відео)</h3>
+          <p>Інструмент виступає <strong>золотою серединою</strong> між двома крайнощами:</p>
+
+          <div class="code-wrapper">
+            <pre><code>[Автономний AI-агент] &lt;----- [ Steps to Case ] -----&gt; [ Короткий промпт на 5 рядків ]
+(Губиться, повільний)       (Золота середина)         (Вигадує локатори наосліп)</code></pre>
+          </div>
+
+          <ul>
+            <li><strong>Підхід А (Повні автономні AI-агенти):</strong> Агент керує браузером самостійно. Він блукає сторінками, застрягає на складних інтерфейсах і витрачає багато токенів.</li>
+            <li><strong>Підхід Б (Абстрактні промпти на 5 рядків):</strong> Інженер пише 5 загальних слів і просить AI згенерувати код. AI не знає DOM сторінки і вгадує селектори. DOM означає Document Object Model. Це дерево всіх елементів веб-сторінки. Тест одразу ламається.</li>
+            <li><strong>Підхід Steps to Case:</strong> Людина сама проходить потрібний бізнес-сценарій. Розширення зберігає точні дані DOM та зв'язки між елементами. AI використовує ці факти і пише надійний код.</li>
+          </ul>
+          <p>Головна вигода цього підходу — <a href="#heal-loop">цикл генерація → запуск → лікування</a> з розділу 6: людина вже довела, що сценарій працює, тож AI може сам виправляти згенерований тест без нагляду.</p>
+        </div>
+      </section>
+
+      <!-- ================= Module 2 ================= -->
+      <section class="section-block" id="sec-2">
+        <div class="lang-en">
+          <h2 class="module-title">2. Recording & Capturing Actions</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            The recorder tracks real user actions. It turns clicks and typing into smart test steps. It supports four step types. It lets you mark preconditions and manual actions so you can reuse existing code.
+          </div>
+
+          <h3 class="sub-title">Live Action Recording Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>01_action_recording.gif</span><span>Timestamp: 00:11 - 00:21</span></div>
+            <img loading="lazy" src="media/01_action_recording.gif" alt="Live Action Recording">
+          </div>
+
+          <h3 class="sub-title">How the Recorder Works</h3>
+          <p>Click <strong>Start Recording</strong>. The extension monitors browser actions. It captures user intent instead of raw clicks:</p>
+          <ul>
+            <li><strong>Mimicking User Intent:</strong> Humans click an input field to focus it, then type. The tool optimizes this into one <code>fill</code> action.</li>
+            <li><strong>Predefined Vocabulary:</strong> The extension uses strict action words: <code>click</code>, <code>double click</code>, <code>fill</code>, <code>press</code> (keys such as Enter, Tab, Escape), <code>select</code>, <code>check</code>, <code>uncheck</code>, and <code>navigate</code>.</li>
+            <li><strong>Noise Filtering:</strong> A click on a checkbox becomes one <code>check</code> step, not a click plus a check. Synthetic clicks that the page fires by itself are ignored, so only real user actions are recorded.</li>
+            <li><strong>Password Masking:</strong> Values typed into password fields are shown and exported as <code>••••••••</code>.</li>
+          </ul>
+
+          <h3 class="sub-title">Pause, Continue & Reset</h3>
+          <ul>
+            <li><strong>Pause:</strong> stop capturing for a moment (for example, to prepare data in another tab), then <strong>Continue</strong>.</li>
+            <li><strong>Reset:</strong> discards the current recording after a confirmation.</li>
+            <li>The recording survives browser and extension restarts, because it is saved locally.</li>
+          </ul>
+
+          <h3 class="sub-title">Pages, Tabs & Frames</h3>
+          <div class="media-card">
+            <div class="media-header"><span>10_multi_page_recording.gif</span><span>Timestamp: 02:59 - 03:11</span></div>
+            <img loading="lazy" src="media/10_multi_page_recording.gif" alt="Multi-page recording">
+          </div>
+
+          <ul>
+            <li><strong>Automatic pages:</strong> steps are grouped into pages by URL path. Hash routes (<code>#/users</code>) count as separate pages. Query strings and plain anchors are ignored.</li>
+            <li><strong>Popups and new tabs:</strong> tabs opened from the recorded tab (login popups, <code>target=_blank</code> links) are recorded too. Other tabs are ignored.</li>
+            <li><strong>Iframes:</strong> actions inside iframes are captured. The export marks them with <code>frameUrl</code>.</li>
+            <li><strong>Network requests:</strong> for each step, the backend API calls it triggered are saved (scripts, images and fonts are filtered out). They help the AI add proper waits.</li>
+          </ul>
+
+          <h3 class="sub-title">Record Single Page Mode</h3>
+          <p>Use <strong>Record Single Page</strong> when you want to describe one page, not a whole flow: for example, to build or extend a page object. It records actions, assertions and manual steps on the current page only. Steps captured after navigating away are dropped. The export is a flat list of steps for that page, with element attributes and containers.</p>
+
+          <h3 class="sub-title" id="step-types" data-target-id="step-types">Four Step Types Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>02_step_types.gif</span><span>Timestamp: 00:26 - 00:38</span></div>
+            <img loading="lazy" src="media/02_step_types.gif" alt="Four Step Types">
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Step Type</th>
+                  <th>Description</th>
+                  <th>Best Use Case</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Automatic Steps</strong></td>
+                  <td>Recorded directly from browser clicks and typing.</td>
+                  <td>Normal on-screen user actions.</td>
+                </tr>
+                <tr>
+                  <td><strong>Manual Steps</strong></td>
+                  <td>Hand-crafted placeholder steps.</td>
+                  <td>Actions outside the web browser (e.g. mobile push, SMS, backend query).</td>
+                </tr>
+                <tr>
+                  <td><strong>Verifications</strong></td>
+                  <td>Assertion steps (checks on screen values).</td>
+                  <td>Verifying UI state or data text.</td>
+                </tr>
+                <tr>
+                  <td><strong>Preconditions</strong></td>
+                  <td>Setup steps executed before the main test flow.</td>
+                  <td>Login, backend API prep, or database seeding.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-content">
+              <strong>Video Rule for Instructions:</strong> Always tell your AI test generator:
+              <em>"Do not create precondition steps from zero. They lack context here. If existing helper methods exist in other tests, reuse them."</em>
+            </div>
+          </div>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">2. Запис та збереження дій користувача</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Рекордер відслідковує реальні дії користувача. Він перетворює кліки та введення на зрозумілі кроки тесту. Він підтримує 4 типи кроків і дозволяє позначати передумови для повторного використання коду.
+          </div>
+
+          <h3 class="sub-title">Відеодемонстрація: Запис дій наживо</h3>
+          <div class="media-card">
+            <div class="media-header"><span>01_action_recording.gif</span><span>Таймкод: 00:11 - 00:21</span></div>
+            <img loading="lazy" src="media/01_action_recording.gif" alt="Live Action Recording">
+          </div>
+
+          <h3 class="sub-title">Як працює рекордер дій</h3>
+          <p>Натисніть <strong>Start Recording</strong>. Розширення фіксує всі маніпуляції у браузері, зберігаючи реальний намір користувача:</p>
+          <ul>
+            <li><strong>Фіксація наміру:</strong> Людина спочатку клікає на поле, щоб активувати його, а потім вводить текст. Розширення оптимізує це в одну дію <code>fill</code> (заповнення поля).</li>
+            <li><strong>Чіткий словник дій:</strong> Використовуються стандартні типи дій: <code>click</code>, <code>double click</code>, <code>fill</code>, <code>press</code> (клавіші Enter, Tab, Escape), <code>select</code>, <code>check</code>, <code>uncheck</code> та <code>navigate</code>.</li>
+            <li><strong>Фільтр шуму:</strong> Клік на чекбокс записується одним кроком <code>check</code>, а не кліком плюс check. Синтетичні кліки, які сторінка генерує сама, ігноруються — записуються лише реальні дії користувача.</li>
+            <li><strong>Маскування паролів:</strong> Значення з полів пароля показуються та експортуються як <code>••••••••</code>.</li>
+          </ul>
+
+          <h3 class="sub-title">Пауза, продовження та скидання</h3>
+          <ul>
+            <li><strong>Pause:</strong> тимчасово зупиняє запис (наприклад, щоб підготувати дані в іншій вкладці), потім натисніть <strong>Continue</strong>.</li>
+            <li><strong>Reset:</strong> видаляє поточний запис після підтвердження.</li>
+            <li>Запис переживає перезапуск браузера та розширення, бо зберігається локально.</li>
+          </ul>
+
+          <h3 class="sub-title">Сторінки, вкладки та фрейми</h3>
+          <div class="media-card">
+            <div class="media-header"><span>10_multi_page_recording.gif</span><span>Таймкод: 02:59 - 03:11</span></div>
+            <img loading="lazy" src="media/10_multi_page_recording.gif" alt="Multi-page recording">
+          </div>
+
+          <ul>
+            <li><strong>Автоматичні сторінки:</strong> кроки групуються у сторінки за шляхом URL. Hash-маршрути (<code>#/users</code>) вважаються окремими сторінками. Параметри запиту та звичайні якорі ігноруються.</li>
+            <li><strong>Спливаючі вікна та нові вкладки:</strong> вкладки, відкриті із записуваної (вікно логіну, посилання <code>target=_blank</code>), теж записуються. Інші вкладки ігноруються.</li>
+            <li><strong>Iframe:</strong> дії всередині фреймів записуються. В експорті вони позначені полем <code>frameUrl</code>.</li>
+            <li><strong>Мережеві запити:</strong> для кожного кроку зберігаються викликані ним API-запити (скрипти, картинки та шрифти відфільтровано). Це допомагає AI додати правильні очікування.</li>
+          </ul>
+
+          <h3 class="sub-title">Режим Record Single Page</h3>
+          <p>Використовуйте <strong>Record Single Page</strong>, коли потрібно описати одну сторінку, а не весь сценарій: наприклад, щоб створити або доповнити Page Object. Режим записує дії, перевірки та мануальні кроки лише на поточній сторінці. Кроки після переходу на іншу сторінку відкидаються. Експорт — це плаский список кроків цієї сторінки з атрибутами елементів і контейнерами.</p>
+
+          <h3 class="sub-title" data-target-id="step-types">Відеодемонстрація: Чотири типи кроків</h3>
+          <div class="media-card">
+            <div class="media-header"><span>02_step_types.gif</span><span>Таймкод: 00:26 - 00:38</span></div>
+            <img loading="lazy" src="media/02_step_types.gif" alt="Four Step Types">
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Тип кроку</th>
+                  <th>Опис</th>
+                  <th>Коли використовувати</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Автоматичні кроки</strong></td>
+                  <td>Записуються напряму з дій користувача у вікні браузера.</td>
+                  <td>Звичайні кліки, введення тексту та вибір опцій.</td>
+                </tr>
+                <tr>
+                  <td><strong>Мануальні кроки</strong></td>
+                  <td>Кроки-заглушки для дій поза межами браузера.</td>
+                  <td>Перевірка SMS, пуш-повідомлень або запит до бази даних.</td>
+                </tr>
+                <tr>
+                  <td><strong>Перевірки</strong></td>
+                  <td>Кроки перевірки значень та стану екрана.</td>
+                  <td>Перевірка видимого тексту чи повідомлень про помилку.</td>
+                </tr>
+                <tr>
+                  <td><strong>Прекондішни</strong></td>
+                  <td>Підготовчі дії (Preconditions), які виконуються до тесту.</td>
+                  <td>Авторизація, підготовка тестових даних через API або БД.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-content">
+              <strong>Правило для інструкцій з відео:</strong> Завжди вказуйте генератору коду:
+              <em>"Не створюйте прекондішни з нуля, бо для них бракує контексту. Якщо ці кроки вже реалізовані в інших тестах, перевикористайте готові методи."</em>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Module 3 ================= -->
+      <section class="section-block" id="sec-3">
+        <div class="lang-en">
+          <h2 class="module-title">3. Assertions & Containers</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            Containers limit element searches to a specific area. This stops locators from picking the wrong button. You can use arrow keys or mouse scroll to pick tricky parent rows. Verifications check that screen results match expectations.
+          </div>
+
+          <h3 class="sub-title" id="container-nav" data-target-id="container-nav">Containers & Hierarchy Navigation Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>04_containers.gif</span><span>Timestamp: 01:36 - 01:53</span></div>
+            <img loading="lazy" src="media/04_containers.gif" alt="Containers and Scoped Search">
+          </div>
+
+          <h3 class="sub-title">Handling Non-Unique Elements</h3>
+          <p>Web pages often contain duplicate elements (like ten "Edit" buttons in a list). A human understands row context, but automated tests need exact locators. A locator is a code string that points to an element on a web page.</p>
+          <p><strong>Containers</strong> solve this problem. The tool first locates the container (like John's table row), then searches for the button <em>only</em> inside that container.</p>
+
+          <h3>Two Ways to Bind Containers</h3>
+          <ul>
+            <li><strong>Pre-Action Container:</strong> Set container mode <em>before</em> you click the target element. This is vital for dismissible elements. A dismissible element is a popup modal or menu that disappears the moment you click inside it.</li>
+            <li><strong>Post-Action Container:</strong> Link a container to an existing step in your recorded list retroactively.</li>
+          </ul>
+
+          <h3>Picking a Container, Step by Step</h3>
+          <ol>
+            <li><strong>Before the action:</strong> click <strong>+ Container</strong> in the Steps header, pick the area on the page, give it a name, then perform the action. The container is attached to the next recorded step.</li>
+            <li><strong>After the action:</strong> click the cube icon on a step. The tool highlights the recorded element, so you can move up to the right parent and click it.</li>
+            <li>A step with a container shows a <strong>Remove container</strong> button instead.</li>
+            <li>Press <strong>Esc</strong> at any time to cancel picking.</li>
+          </ol>
+
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-content">
+              <strong>Same-page rule:</strong> A container must come from the step's own page. If the browser shows a different page, the panel asks you to open that step's page first.
+            </div>
+          </div>
+
+          <h3>Keyboard and Scroll DOM Navigation</h3>
+          <p>Selecting an exact structural container (like a table row <code>&lt;tr&gt;</code>) with a mouse can be difficult.</p>
+          <p>The tool provides <strong>DOM Level Traversal</strong>: Hover your mouse over the element and scroll the mouse wheel or press the <strong>Up / Down arrow keys</strong>. This moves the highlight up or down through the element tree level by level.</p>
+
+          <h3 class="sub-title">Verifications & Assertions Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>05_verifications.gif</span><span>Timestamp: 01:57 - 02:11</span></div>
+            <img loading="lazy" src="media/05_verifications.gif" alt="Verifications & Assertions">
+          </div>
+
+          <h3>Creating Assertions and Verifications</h3>
+          <ol>
+            <li>Click <strong>+ Assertion</strong> and select an element on the screen. The element is optional.</li>
+            <li>Choose the check type: <code>text equals</code>, <code>text contains</code>, <code>visible</code>, <code>hidden</code>, <code>enabled</code>, <code>disabled</code>, <code>checked</code>, or <code>unchecked</code>.</li>
+            <li><strong>Text Expectation Fallback:</strong> If the element is not currently in the DOM, type the expected result by hand. It is exported as an assertion without an element.</li>
+            <li><strong>Container Wrapping:</strong> Wrap verification elements inside a container to guarantee uniqueness.</li>
+            <li><strong>Edit later:</strong> click the pencil icon on an assertion to change its type, value or element.</li>
+          </ol>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">3. Перевірки та Контейнери</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Контейнери обмежують область пошуку елемента. Це не дає автотесту натиснути неправильну кнопку. Стрілки та скрол дозволяють точно обрати потрібний рядок у таблиці. Перевірки звіряють екран з очікуваннями.
+          </div>
+
+          <h3 class="sub-title" data-target-id="container-nav">Відеодемонстрація: Робота з контейнерами та навігація</h3>
+          <div class="media-card">
+            <div class="media-header"><span>04_containers.gif</span><span>Таймкод: 01:36 - 01:53</span></div>
+            <img loading="lazy" src="media/04_containers.gif" alt="Containers and Scoped Search">
+          </div>
+
+          <h3 class="sub-title">Робота з однаковими елементами</h3>
+          <p>У таблицях часто є багато однакових кнопок (наприклад, 10 кнопок "Редагувати"). Людина бачить рядок потрібного користувача, але автотесту потрібен точний локатор. Локатор — це рядок коду, який знаходить потрібний елемент на сторінці.</p>
+          <p><strong>Контейнери</strong> вирішують цю проблему. Інструмент спочатку знаходить контейнер (наприклад, рядок користувача Івана), а потім шукає кнопку тільки всередині цього рядка.</p>
+
+          <h3>Два способи прив'язки контейнера</h3>
+          <ul>
+            <li><strong>До натискання (Pre-Action):</strong> Увімкніть вибір контейнера перед натисканням на елемент. Це необхідно для елементів, які зникають після кліку (наприклад, спливаючі списки чи модальні вікна).</li>
+            <li><strong>Після запису (Post-Action):</strong> Контейнер можна прив'язати до будь-якого раніше записаного кроку в списку.</li>
+          </ul>
+
+          <h3>Вибір контейнера крок за кроком</h3>
+          <ol>
+            <li><strong>До дії:</strong> натисніть <strong>+ Container</strong> у заголовку Steps, виберіть область на сторінці, дайте їй назву і виконайте дію. Контейнер прив'яжеться до наступного записаного кроку.</li>
+            <li><strong>Після дії:</strong> натисніть іконку куба на кроці. Інструмент підсвітить записаний елемент, щоб ви піднялися до потрібного батьківського блоку і клікнули на нього.</li>
+            <li>На кроці з контейнером замість цього з'являється кнопка <strong>Remove container</strong>.</li>
+            <li>Натисніть <strong>Esc</strong>, щоб скасувати вибір у будь-який момент.</li>
+          </ol>
+
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-content">
+              <strong>Правило однієї сторінки:</strong> Контейнер має бути з тієї ж сторінки, що й крок. Якщо в браузері відкрита інша сторінка, панель попросить спочатку відкрити сторінку цього кроку.
+            </div>
+          </div>
+
+          <h3>Навігація деревом DOM стрілками та скролом</h3>
+          <p>Вибрати рядок таблиці <code>&lt;tr&gt;</code> курсором буває важко, бо кнопки всередині закривають його.</p>
+          <p>Додаток підтримує <strong>покроковий вибір рівня</strong>: наведіть мишку на кнопку та покрутіть колесо або натискайте стрілки <strong>Вгору / Вниз</strong> на клавіатурі. Виділення перейде на рядок таблиці, не перескакуючи на всю таблицю.</p>
+
+          <h3 class="sub-title">Відеодемонстрація: Створення перевірок</h3>
+          <div class="media-card">
+            <div class="media-header"><span>05_verifications.gif</span><span>Таймкод: 01:57 - 02:11</span></div>
+            <img loading="lazy" src="media/05_verifications.gif" alt="Verifications & Assertions">
+          </div>
+
+          <h3>Як створити перевірку</h3>
+          <ol>
+            <li>Натисніть <strong>+ Assertion</strong> і виберіть елемент на екрані. Елемент не обов'язковий.</li>
+            <li>Виберіть тип перевірки: <code>text equals</code>, <code>text contains</code>, <code>visible</code>, <code>hidden</code>, <code>enabled</code>, <code>disabled</code>, <code>checked</code> або <code>unchecked</code>.</li>
+            <li><strong>Запасний варіант очікуваного тексту:</strong> Якщо елемента ще немає на екрані, напишіть очікуваний результат вручну. Він експортується як перевірка без елемента.</li>
+            <li><strong>Обгортання контейнером:</strong> Перевірку можна обгорнути контейнером для повної унікальності.</li>
+            <li><strong>Редагування:</strong> натисніть іконку олівця на перевірці, щоб змінити її тип, значення чи елемент.</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ================= Module 4 ================= -->
+      <section class="section-block" id="sec-4">
+        <div class="lang-en">
+          <h2 class="module-title">4. Organizing & Editing</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            The Organize stage lets you edit, reorder, delete, and merge recorded steps. If you make a mistake during recording, you can fix it here without re-recording the whole test.
+          </div>
+
+          <h3 class="sub-title">Smart Step Naming Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>03_step_naming.gif</span><span>Timestamp: 00:52 - 01:06</span></div>
+            <img loading="lazy" src="media/03_step_naming.gif" alt="Smart Step Naming">
+          </div>
+
+          <h3 class="sub-title">Smart Naming Extraction</h3>
+          <p>Buttons contain text inside them, but input fields do not. Their labels live in parent divisions or nearby headings.</p>
+          <p>The tool climbs upward through the DOM tree, inspects parent labels, checks configured priority attributes, and presents recommended names. Users can select a suggestion or type a custom name.</p>
+
+          <h3 class="sub-title">Step Editing & Merging Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>08_step_editing_merging.gif</span><span>Timestamp: 04:00 - 04:22</span></div>
+            <img loading="lazy" src="media/08_step_editing_merging.gif" alt="Step Editing and Merging">
+          </div>
+
+          <h3>Step Editing Features</h3>
+          <ul>
+            <li><strong>Rearrange Steps:</strong> Drag and drop steps to fix execution sequence.</li>
+            <li><strong>Delete Accidental Clicks:</strong> Remove misclicks without re-recording.</li>
+            <li><strong>Rename Steps:</strong> Click the step name to pick another suggested description (the Description Picker), or click the pencil to type your own text.</li>
+            <li><strong>Add Missing Steps:</strong> Insert manual steps, verifications, or preconditions.</li>
+            <li><strong>Step Composition (Step Merging):</strong> Combine multiple technical clicks into one logical step (e.g., expanding a custom dropdown and picking an option merges into <em>"Select user role"</em>).</li>
+          </ul>
+
+          <h3>Composite Steps</h3>
+          <div class="media-card">
+            <div class="media-header"><span>12_composite_steps.gif</span><span>Timestamp: 04:22 - 04:34</span></div>
+            <img loading="lazy" src="media/12_composite_steps.gif" alt="Composite steps">
+          </div>
+
+          <ul>
+            <li>Select several steps and click <strong>Create Composite Step</strong>. Give it a business name.</li>
+            <li>Inside a composite step you can rename it, reorder or delete its sub-steps, and add manual sub-steps.</li>
+            <li>In the export, a composite becomes a <code>SUBGROUP</code>. The AI turns it into one page object method.</li>
+          </ul>
+
+          <h3>Preconditions & Pages</h3>
+          <ul>
+            <li><strong>Preconditions:</strong> add, edit, delete, and drag to reorder them in the Preconditions section.</li>
+            <li><strong>Pages:</strong> create a page by hand, rename it (double-click), drag pages to change the order, and use <strong>More actions</strong> for the rest. You can also remove a manual step grouping.</li>
+            <li><strong>Back to recording:</strong> return from review to the recorder to capture more steps.</li>
+          </ul>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">4. Організація та Редагування кроків</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Етап організації дозволяє змінювати порядок, видаляти зайві кліки та об'єднувати кроки. Якщо ви помилилися під час запису, все можна виправити без перезапису всього сценарію.
+          </div>
+
+          <h3 class="sub-title">Відеодемонстрація: Розумне визначення назв кроків</h3>
+          <div class="media-card">
+            <div class="media-header"><span>03_step_naming.gif</span><span>Таймкод: 00:52 - 01:06</span></div>
+            <img loading="lazy" src="media/03_step_naming.gif" alt="Smart Step Naming">
+          </div>
+
+          <h3 class="sub-title">Як працює розумне найменування</h3>
+          <p>Кнопки мають текст всередині, але поля введення часто безіменні. Їхній опис знаходиться поруч у заголовках чи батьківських блоках.</p>
+          <p>Розширення піднімається вгору по дереву DOM, перевіряє атрибути у заданому порядку пріоритетів і пропонує список вдалий назв. Ви можете вибрати варіант зі списку або ввести власну назву.</p>
+
+          <h3 class="sub-title">Відеодемонстрація: Редагування та об'єднання кроків</h3>
+          <div class="media-card">
+            <div class="media-header"><span>08_step_editing_merging.gif</span><span>Таймкод: 04:00 - 04:22</span></div>
+            <img loading="lazy" src="media/08_step_editing_merging.gif" alt="Step Editing and Merging">
+          </div>
+
+          <h3>Можливості редагування</h3>
+          <ul>
+            <li><strong>Зміна порядку:</strong> Перетягуйте кроки мишкою для потрібної послідовності.</li>
+            <li><strong>Видалення зайвого:</strong> Видаляйте випадкові кліки на пусті місця.</li>
+            <li><strong>Перейменування кроків:</strong> Натисніть на назву кроку, щоб вибрати інший запропонований опис (Description Picker), або на олівець, щоб написати власний текст.</li>
+            <li><strong>Додавання кроків:</strong> Вставляйте мануальні кроки, перевірки або прекондішни.</li>
+            <li><strong>Об'єднання кроків (Step Merging):</strong> Поєднуйте кілька кліків в одну бізнес-дію (наприклад, відкриття меню і вибір пункту об'єднуються у <em>"Вибрати роль користувача"</em>).</li>
+          </ul>
+
+          <h3>Складені кроки</h3>
+          <div class="media-card">
+            <div class="media-header"><span>12_composite_steps.gif</span><span>Таймкод: 04:22 - 04:34</span></div>
+            <img loading="lazy" src="media/12_composite_steps.gif" alt="Composite steps">
+          </div>
+
+          <ul>
+            <li>Виділіть кілька кроків і натисніть <strong>Create Composite Step</strong>. Дайте йому бізнес-назву.</li>
+            <li>Усередині складеного кроку можна змінити назву, порядок чи видалити підкроки, а також додати мануальні підкроки.</li>
+            <li>В експорті складений крок стає <code>SUBGROUP</code>. AI перетворює його на один метод Page Object.</li>
+          </ul>
+
+          <h3>Передумови та сторінки</h3>
+          <ul>
+            <li><strong>Передумови:</strong> додавайте, редагуйте, видаляйте та перетягуйте їх у розділі Preconditions.</li>
+            <li><strong>Сторінки:</strong> створюйте сторінку вручну, перейменовуйте (подвійний клік), перетягуйте для зміни порядку, решта дій — у меню <strong>More actions</strong>. Також можна прибрати ручне групування кроків.</li>
+            <li><strong>Повернення до запису:</strong> з екрану перегляду можна повернутися до рекордера і дописати кроки.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ================= Module 5 ================= -->
+      <section class="section-block" id="sec-5">
+        <div class="lang-en">
+          <h2 class="module-title">5. Exporting Content</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            The Export screen has three tabs: an AI prompt for natural test cases, a ready-made readable test case, and a JSON file with every page, step, element and container. The JSON powers automated test generation (section 6).
+          </div>
+
+          <h3 class="sub-title">Final Exported Artifacts Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>09_final_artifacts_json.gif</span><span>Timestamp: 04:45 - 05:08</span></div>
+            <img loading="lazy" src="media/09_final_artifacts_json.gif" alt="Final Exported Artifacts">
+          </div>
+
+          <h3 class="sub-title">The Three Export Tabs</h3>
+          <ol>
+            <li>
+              <strong>AI Prompt:</strong>
+              Recorded steps can read like robot commands. The export screen gives you an AI prompt template, already filled with your recording.
+              Copy it into any LLM (Large Language Model. An AI system that generates text and code) to polish steps into natural business language for Jira, TestRail, or Notion. Use <strong>Copy Filled</strong>, <strong>Download</strong>, or <strong>Save</strong> to keep your edited prompt as the new template.
+            </li>
+            <li>
+              <strong>Test Case:</strong>
+              A readable test case generated right in the extension, with no LLM needed. Copy or download it.
+            </li>
+            <li>
+              <strong>JSON:</strong>
+              JSON means JavaScript Object Notation. This is a text format for structured data.
+              The JSON file holds pages, steps, element attributes, accessible names, containers, iframes and triggered requests. Pass it to an AI coding agent to generate test code for Playwright, Cypress, or Selenium without guessing selectors. See <a href="#sec-code">section 6</a> for how to do it in your own framework.
+            </li>
+          </ol>
+
+          <h3 class="sub-title">What the JSON Looks Like</h3>
+          <div class="code-wrapper">
+            <pre><code>{
+  "testName": "Edit infobox title",
+  "baseUrl": "https://staging.example.com",
+  "startUrl": "/handbook",
+  "preconditions": ["User is logged in as editor"],
+  "pages": [{
+    "pageName": "edit", "pageUrl": "/handbook/319368/edit", "pageTag": "new-layout",
+    "steps": [{
+      "stepOrder": 6, "stepType": "RECORDED", "actionKind": "action",
+      "actionName": "Fill Title", "actionValue": "New title",
+      "elementTag": "input", "elementLabel": "Title",
+      "elementAttributes": { "name": "infobox_item_title" },
+      "containerLabel": "Content", "containerHtml": "&lt;div class=\"tab-content\"&gt;...",
+      "triggeredRequests": [{ "method": "PUT", "url": "/api/infobox/319368", "status": 200 }]
+    }]
+  }]
+}</code></pre>
+          </div>
+          <p>Step types: <code>RECORDED</code>, <code>MANUAL</code>, <code>ASSERTION_WITH_ELEMENT</code>, <code>ASSERTION_WITHOUT_ELEMENT</code>, <code>COMBINED</code>, and <code>SUBGROUP</code>. Run steps in ascending <code>stepOrder</code> across all pages.</p>
+
+          <h3 class="sub-title">Import a Recording</h3>
+          <p>A downloaded JSON is also a save file. Use <strong>Upload JSON File</strong> on the start screen to open it again and keep editing.</p>
+
+          <div class="callout tip">
+            <div class="callout-icon">💡</div>
+            <div class="callout-content">
+              <strong>Prompt Template Ready:</strong>
+              The generated AI prompt is tool-agnostic. Tool-agnostic means you can paste it into ChatGPT, Claude, Gemini, or any local offline model.
+            </div>
+          </div>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">5. Експорт тестів та JSON-контексту</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Екран експорту має три вкладки: AI-промпт для зрозумілого тесткейсу, готовий тесткейс та JSON-файл з усіма сторінками, кроками, елементами і контейнерами. JSON — основа для генерації автотестів (розділ 6).
+          </div>
+
+          <h3 class="sub-title">Відеодемонстрація: Фінальні артефакти</h3>
+          <div class="media-card">
+            <div class="media-header"><span>09_final_artifacts_json.gif</span><span>Таймкод: 04:45 - 05:08</span></div>
+            <img loading="lazy" src="media/09_final_artifacts_json.gif" alt="Final Exported Artifacts">
+          </div>
+
+          <h3 class="sub-title">Три вкладки експорту</h3>
+          <ol>
+            <li>
+              <strong>AI Prompt:</strong>
+              Записані кроки спочатку виглядають дещо механічно. Екран експорту надає шаблон AI-промпту, вже заповнений вашим записом.
+              Вставте його в будь-яку модель (ChatGPT, Claude, Gemini), щоб отримати живий та зрозумілий опис для Jira, TestRail або Notion. Кнопки <strong>Copy Filled</strong>, <strong>Download</strong> та <strong>Save</strong> (зберегти відредагований промпт як новий шаблон).
+            </li>
+            <li>
+              <strong>Test Case:</strong>
+              Зрозумілий тесткейс, згенерований прямо в розширенні, без жодної LLM. Його можна скопіювати або завантажити.
+            </li>
+            <li>
+              <strong>JSON:</strong>
+              JSON (JavaScript Object Notation) — це текстовий формат структурованих даних.
+              Файл зберігає сторінки, кроки, атрибути елементів, доступні назви, контейнери, фрейми та викликані запити. Передайте його агенту, щоб він написав автотести для Playwright, Cypress чи Selenium без вгадування селекторів. Як зробити це у вашому фреймворку — див. <a href="#sec-code">розділ 6</a>.
+            </li>
+          </ol>
+
+          <h3 class="sub-title">Як виглядає JSON</h3>
+          <div class="code-wrapper">
+            <pre><code>{
+  "testName": "Edit infobox title",
+  "baseUrl": "https://staging.example.com",
+  "startUrl": "/handbook",
+  "preconditions": ["User is logged in as editor"],
+  "pages": [{
+    "pageName": "edit", "pageUrl": "/handbook/319368/edit", "pageTag": "new-layout",
+    "steps": [{
+      "stepOrder": 6, "stepType": "RECORDED", "actionKind": "action",
+      "actionName": "Fill Title", "actionValue": "New title",
+      "elementTag": "input", "elementLabel": "Title",
+      "elementAttributes": { "name": "infobox_item_title" },
+      "containerLabel": "Content", "containerHtml": "&lt;div class=\"tab-content\"&gt;...",
+      "triggeredRequests": [{ "method": "PUT", "url": "/api/infobox/319368", "status": 200 }]
+    }]
+  }]
+}</code></pre>
+          </div>
+          <p>Типи кроків: <code>RECORDED</code>, <code>MANUAL</code>, <code>ASSERTION_WITH_ELEMENT</code>, <code>ASSERTION_WITHOUT_ELEMENT</code>, <code>COMBINED</code> та <code>SUBGROUP</code>. Кроки виконуються за зростанням <code>stepOrder</code> через усі сторінки.</p>
+
+          <h3 class="sub-title">Імпорт запису</h3>
+          <p>Завантажений JSON — це також файл збереження. Кнопка <strong>Upload JSON File</strong> на стартовому екрані відкриває його знову для редагування.</p>
+
+          <div class="callout tip">
+            <div class="callout-icon">💡</div>
+            <div class="callout-content">
+              <strong>Універсальність промпту:</strong>
+              Шаблон промпту не прив'язаний до конкретного інструменту. Використовуйте будь-яку зручну модель, навіть безкоштовні версії.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Module 6: Automation Code ================= -->
+      <section class="section-block" id="sec-code">
+        <div class="lang-en">
+          <h2 class="module-title">6. From JSON to Automation Code (for engineers)</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            Make one reusable AI command that knows your framework. Point it at a recording JSON and it writes the test the way your team would. Then run it in a loop (generate → run → heal → re-run) until the test passes, without anyone stepping in.
+          </div>
+
+          <h3 class="sub-title">Why a Command, Not a One-Off Prompt</h3>
+          <p>The export prompt is generic. Your project is not: it has its own folder layout, page objects, fixtures, naming, locator policy and helpers. Write those rules once, as a command for your AI coding agent (Claude Code <code>.claude/commands/</code>, Cursor rules, Copilot instructions). Every recording then becomes code that looks hand-written by your team.</p>
+
+          <h3 class="sub-title">What the Command Should Contain</h3>
+          <ol>
+            <li><strong>Where code lives:</strong> test folder, page object folder, component folder, file naming.</li>
+            <li><strong>Framework rules:</strong> base classes, fixtures, login helper, test data factories, tagging.</li>
+            <li><strong>Locator policy:</strong> for example, <code>data-testid</code> first, then role and accessible name, never XPath or <code>nth-child</code> unless nothing else works.</li>
+            <li><strong>How to read the JSON:</strong>
+              <ul>
+                <li>Run steps in ascending <code>stepOrder</code> across all pages.</li>
+                <li><code>pageName</code> / <code>pageTag</code> → page object class. <code>componentTag</code> → shared component class (header, modal).</li>
+                <li><code>containerHtml</code> / <code>containerLabel</code> → scope the locator inside its container.</li>
+                <li><code>frameUrl</code> → frame locator.</li>
+                <li><code>triggeredRequests</code> → wait for that response, not a fixed sleep.</li>
+                <li><code>ASSERTION_*</code> → assertions. <code>SUBGROUP</code> → one page object method named after the group. <code>MANUAL</code> → a TODO comment or an existing helper, never invented UI clicks.</li>
+              </ul>
+            </li>
+            <li><strong>Reuse first:</strong> search the repo for existing page objects, methods and helpers before writing new ones. Never build preconditions from scratch (see the rule in section 2).</li>
+          </ol>
+
+          <p><strong>Real-world example: <code>.claude/commands/generate-test.md</code></strong></p>
+          <p>This is the structure of a command used on a real project (Java + Playwright + JUnit). Team-specific details are replaced with <code>[YOUR: …]</code> placeholders. Fill them in once, and paste your own class templates at the end.</p>
+          <div class="code-wrapper">
+            <pre><code>---
+model: sonnet            # any capable coding model
+---
+
+# Generate an automated test from a Steps to Case recording
+
+Input: the recording JSON at $ARGUMENTS. Treat it as the source of truth.
+Goal: stable, non-flaky page objects and one test class that reuse what already exists.
+
+## Project context (fill in once for your team)
+- Language / framework:  [YOUR: e.g. Java + Playwright + JUnit 5]
+- Page object base class: [YOUR: e.g. BasePlaywrightPage]
+- Test base class:        [YOUR: e.g. BasePlaywrightTest with open(url)]
+- How tests reach pages:  [YOUR: e.g. app.loginPage().clickSignIn()]
+- File placement:         [YOUR: folders for pages, components, tests]
+- pageTag mapping:        [YOUR: e.g. newdesign -&gt; pages/newdesign + NewDesignApp]
+- Precondition helpers:   [YOUR: login fixture, API data factories]
+
+## Step 1. Page objects (one page at a time)
+1. Class name from `pageName` (PascalCase + "Page"). `pageTag` picks the package and
+   the App class. Elements with `componentTag` go to that component class instead.
+2. If the class exists, add to it and keep its style. Otherwise create it.
+3. Before adding a method, look for one that already does this step. Reuse it.
+
+## Step 2. One method per step, by stepType
+- RECORDED: action method. `actionKind` is the verb (click, fill, press, select,
+  check, uncheck, dblclick, navigate). `actionValue` is the text, key or option.
+- ASSERTION_WITH_ELEMENT: assertion from `assertElementType` and the
+  `assertElement*` fields. The expected text is `actionValue`.
+- ASSERTION_WITHOUT_ELEMENT, MANUAL, MANUAL_WITHOUT_ELEMENT: empty method named
+  from `actionName`, with a TODO. Never invent UI actions for them.
+- SUBGROUP: ONE method named from `actionName`. Its body runs the nested `steps`
+  with the same rules.
+- COMBINED: one method. `comment` items inside it label the sub-actions after them.
+
+## Locators
+Build them from the element fields, best first:
+  [YOUR: test attribute, e.g. data-testid] -&gt; `elementAttributes` (id, name, data-*)
+  -&gt; role + `elementAccessibleName` -&gt; `elementLabel` / `elementPlaceholder` -&gt; text.
+- `containerHtml` / `containerLabel` present: locate the container first, then the
+  element inside it (table rows, cards, dialogs, repeated buttons).
+- `frameUrl` present: go through that frame first.
+- No XPath, no nth-child, unless nothing else is unique.
+- Field only if used in 2+ methods; local variable if used twice in one method;
+  otherwise inline.
+
+## Naming
+- Action: verb + noun, e.g. fillUsername(value), clickSignIn()
+- Assertion: assert + noun + state, e.g. assertWelcomeVisible()
+- Name source: `actionName` -&gt; `elementAccessibleName` -&gt; `elementLabel` -&gt;
+  `elementAriaLabel` -&gt; `elementInnerText` (3-4 words) -&gt; `elementPlaceholder`.
+- Drop filler words (button, input, field, link) unless that makes it ambiguous.
+
+## Assertion mapping
+visible -&gt; isVisible | hidden -&gt; isHidden | enabled / disabled | checked / unchecked
+text_equals -&gt; hasText(actionValue) | text_contains -&gt; containsText(actionValue)
+
+## Waits
+- `triggeredRequests`: after the action, wait for that response (method + URL).
+- `triggeredNavigationUrl`: wait for that URL. No fixed sleeps.
+
+## Step 3. Test class
+- Name from `testName` (PascalCase + "Test"), one test method.
+- Preconditions: call existing helpers, or write `// Precondition: &lt;text&gt;`.
+  Never build them from scratch.
+- Start with open(`baseUrl` + `startUrl`).
+- Sort ALL steps by `stepOrder` across pages (a page visited twice lists its steps
+  together), then make one page object call per step through [YOUR: App class].
+- No raw locators in the test class.
+
+## Templates
+[YOUR: paste your page object, App registration and test class skeletons here]
+
+## Checklist before finishing
+- [ ] Every step is exactly one method call, in stepOrder
+- [ ] Existing classes and methods reused; new pages registered in the App class
+- [ ] Locators scoped by container / frame wherever the JSON has one
+- [ ] Code compiles, all imports present
+- [ ] Return a map of step actionName -&gt; method call (the heal loop uses it)</code></pre>
+          </div>
+
+          <h3 class="sub-title" id="heal-loop" data-target-id="heal-loop">Best Practice: The Generate → Run → Heal Loop</h3>
+          <p>A recording is made during a run that <strong>passed</strong>: a person walked the flow and the app behaved as expected. So if the generated test fails on the same build and environment, the cause is almost never the product. It is the conversion from recording to code: a weak locator, a missing wait, an iframe, a cookie banner, or a step the recorder did not capture (a hover, a scroll, a focus change).</p>
+          <p>That makes healing safe to hand to the agent. It knows the expected end state, so it can keep fixing <em>how</em> the test gets there until it passes, with no engineer in the loop.</p>
+
+          <p><strong>Example: <code>.claude/commands/generate-and-heal.md</code></strong></p>
+          <div class="code-wrapper">
+            <pre><code>1. Run /generate-test on $ARGUMENTS.
+2. Run only that test. If it passes, stop.
+3. If it fails, read the error, trace and screenshot, find the cause, apply the smallest
+   fix, and go back to step 2. At most 5 attempts.
+
+Allowed fixes: locators (rebuild from elementAttributes, accessible name, label and
+containerHtml), waits (prefer triggeredRequests responses), frame handling, missing
+implicit steps (hover, scroll, dismiss overlay), dynamic test data.
+
+Never: change an expected value, remove, skip or weaken an assertion, delete a recorded
+step, add force:true, raise global timeouts, or wrap steps in try/catch.
+
+Stop and report (do not "fix") when: the same failure repeats after a fix; the only way
+to pass is changing an assertion; or the app behaves differently from the recording.
+Those are signs of a real change or bug, not a capture problem.</code></pre>
+          </div>
+
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-content">
+              <strong>Healing works because the recording is proof the flow passed.</strong> That is only true while the app and data match the recording. Generate and heal soon after recording, against the same environment. Never let the loop change <em>what</em> is checked, only <em>how</em> the test gets there. Otherwise "healing" quietly hides real bugs.
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <div class="callout-icon">💡</div>
+            <div class="callout-content">
+              <strong>Placeholders:</strong> everything marked <code>[YOUR: …]</code>, and the class names in the examples, belong to one team's project. Replace them with your own base classes, folders and helpers.
+            </div>
+          </div>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">6. Від JSON до автотестів (для інженерів)</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Створіть одну команду для AI-агента, яка знає ваш фреймворк. Дайте їй JSON запису — і вона напише тест так, як написала б ваша команда. Потім запускайте її в циклі (генерація → запуск → лікування → повторний запуск), доки тест не пройде, без участі людини.
+          </div>
+
+          <h3 class="sub-title">Чому команда, а не разовий промпт</h3>
+          <p>Промпт експорту універсальний. Ваш проєкт — ні: у нього своя структура папок, Page Object, фікстури, найменування, політика локаторів і хелпери. Опишіть ці правила один раз як команду для вашого AI-агента (Claude Code <code>.claude/commands/</code>, правила Cursor, інструкції Copilot). Тоді кожен запис перетворюється на код, ніби написаний вашою командою вручну.</p>
+
+          <h3 class="sub-title">Що має містити команда</h3>
+          <ol>
+            <li><strong>Де лежить код:</strong> папка тестів, папка Page Object, папка компонентів, правила назв файлів.</li>
+            <li><strong>Правила фреймворку:</strong> базові класи, фікстури, хелпер логіну, фабрики тестових даних, теги.</li>
+            <li><strong>Політика локаторів:</strong> наприклад, спочатку <code>data-testid</code>, потім роль і доступна назва, ніколи XPath чи <code>nth-child</code>, якщо є інший варіант.</li>
+            <li><strong>Як читати JSON:</strong>
+              <ul>
+                <li>Виконувати кроки за зростанням <code>stepOrder</code> через усі сторінки.</li>
+                <li><code>pageName</code> / <code>pageTag</code> → клас Page Object. <code>componentTag</code> → клас спільного компонента (шапка, модальне вікно).</li>
+                <li><code>containerHtml</code> / <code>containerLabel</code> → обмежити локатор його контейнером.</li>
+                <li><code>frameUrl</code> → frame locator.</li>
+                <li><code>triggeredRequests</code> → чекати на відповідь цього запиту, а не фіксовану паузу.</li>
+                <li><code>ASSERTION_*</code> → перевірки. <code>SUBGROUP</code> → один метод Page Object з назвою групи. <code>MANUAL</code> → TODO-коментар або існуючий хелпер, ніколи не вигадані кліки.</li>
+              </ul>
+            </li>
+            <li><strong>Спочатку перевикористання:</strong> перед написанням нового коду шукати в репозиторії існуючі Page Object, методи та хелпери. Ніколи не створювати передумови з нуля (див. правило в розділі 2).</li>
+          </ol>
+
+          <p><strong>Приклад з реального проєкту: <code>.claude/commands/generate-test.md</code></strong></p>
+          <p>Це структура команди з реального проєкту (Java + Playwright + JUnit). Деталі конкретної команди замінено заглушками <code>[YOUR: …]</code>. Заповніть їх один раз і вставте в кінці шаблони власних класів.</p>
+          <div class="code-wrapper">
+            <pre><code>---
+model: sonnet            # any capable coding model
+---
+
+# Generate an automated test from a Steps to Case recording
+
+Input: the recording JSON at $ARGUMENTS. Treat it as the source of truth.
+Goal: stable, non-flaky page objects and one test class that reuse what already exists.
+
+## Project context (fill in once for your team)
+- Language / framework:  [YOUR: e.g. Java + Playwright + JUnit 5]
+- Page object base class: [YOUR: e.g. BasePlaywrightPage]
+- Test base class:        [YOUR: e.g. BasePlaywrightTest with open(url)]
+- How tests reach pages:  [YOUR: e.g. app.loginPage().clickSignIn()]
+- File placement:         [YOUR: folders for pages, components, tests]
+- pageTag mapping:        [YOUR: e.g. newdesign -&gt; pages/newdesign + NewDesignApp]
+- Precondition helpers:   [YOUR: login fixture, API data factories]
+
+## Step 1. Page objects (one page at a time)
+1. Class name from `pageName` (PascalCase + "Page"). `pageTag` picks the package and
+   the App class. Elements with `componentTag` go to that component class instead.
+2. If the class exists, add to it and keep its style. Otherwise create it.
+3. Before adding a method, look for one that already does this step. Reuse it.
+
+## Step 2. One method per step, by stepType
+- RECORDED: action method. `actionKind` is the verb (click, fill, press, select,
+  check, uncheck, dblclick, navigate). `actionValue` is the text, key or option.
+- ASSERTION_WITH_ELEMENT: assertion from `assertElementType` and the
+  `assertElement*` fields. The expected text is `actionValue`.
+- ASSERTION_WITHOUT_ELEMENT, MANUAL, MANUAL_WITHOUT_ELEMENT: empty method named
+  from `actionName`, with a TODO. Never invent UI actions for them.
+- SUBGROUP: ONE method named from `actionName`. Its body runs the nested `steps`
+  with the same rules.
+- COMBINED: one method. `comment` items inside it label the sub-actions after them.
+
+## Locators
+Build them from the element fields, best first:
+  [YOUR: test attribute, e.g. data-testid] -&gt; `elementAttributes` (id, name, data-*)
+  -&gt; role + `elementAccessibleName` -&gt; `elementLabel` / `elementPlaceholder` -&gt; text.
+- `containerHtml` / `containerLabel` present: locate the container first, then the
+  element inside it (table rows, cards, dialogs, repeated buttons).
+- `frameUrl` present: go through that frame first.
+- No XPath, no nth-child, unless nothing else is unique.
+- Field only if used in 2+ methods; local variable if used twice in one method;
+  otherwise inline.
+
+## Naming
+- Action: verb + noun, e.g. fillUsername(value), clickSignIn()
+- Assertion: assert + noun + state, e.g. assertWelcomeVisible()
+- Name source: `actionName` -&gt; `elementAccessibleName` -&gt; `elementLabel` -&gt;
+  `elementAriaLabel` -&gt; `elementInnerText` (3-4 words) -&gt; `elementPlaceholder`.
+- Drop filler words (button, input, field, link) unless that makes it ambiguous.
+
+## Assertion mapping
+visible -&gt; isVisible | hidden -&gt; isHidden | enabled / disabled | checked / unchecked
+text_equals -&gt; hasText(actionValue) | text_contains -&gt; containsText(actionValue)
+
+## Waits
+- `triggeredRequests`: after the action, wait for that response (method + URL).
+- `triggeredNavigationUrl`: wait for that URL. No fixed sleeps.
+
+## Step 3. Test class
+- Name from `testName` (PascalCase + "Test"), one test method.
+- Preconditions: call existing helpers, or write `// Precondition: &lt;text&gt;`.
+  Never build them from scratch.
+- Start with open(`baseUrl` + `startUrl`).
+- Sort ALL steps by `stepOrder` across pages (a page visited twice lists its steps
+  together), then make one page object call per step through [YOUR: App class].
+- No raw locators in the test class.
+
+## Templates
+[YOUR: paste your page object, App registration and test class skeletons here]
+
+## Checklist before finishing
+- [ ] Every step is exactly one method call, in stepOrder
+- [ ] Existing classes and methods reused; new pages registered in the App class
+- [ ] Locators scoped by container / frame wherever the JSON has one
+- [ ] Code compiles, all imports present
+- [ ] Return a map of step actionName -&gt; method call (the heal loop uses it)</code></pre>
+          </div>
+
+          <h3 class="sub-title" data-target-id="heal-loop">Найкраща практика: цикл генерація → запуск → лікування</h3>
+          <p>Запис робиться під час проходження, яке <strong>успішне</strong>: людина пройшла сценарій, і застосунок поводився як очікувалося. Тому якщо згенерований тест падає на тій самій збірці й середовищі, причина майже ніколи не в продукті. Вона в перетворенні запису на код: слабкий локатор, відсутнє очікування, iframe, банер cookies або крок, який рекордер не зафіксував (наведення, скрол, зміна фокусу).</p>
+          <p>Тому лікування безпечно доручити агенту. Він знає очікуваний кінцевий стан, тож може виправляти <em>шлях</em> тесту, доки той не пройде, без участі інженера.</p>
+
+          <p><strong>Приклад: <code>.claude/commands/generate-and-heal.md</code></strong></p>
+          <div class="code-wrapper">
+            <pre><code>1. Run /generate-test on $ARGUMENTS.
+2. Run only that test. If it passes, stop.
+3. If it fails, read the error, trace and screenshot, find the cause, apply the smallest
+   fix, and go back to step 2. At most 5 attempts.
+
+Allowed fixes: locators (rebuild from elementAttributes, accessible name, label and
+containerHtml), waits (prefer triggeredRequests responses), frame handling, missing
+implicit steps (hover, scroll, dismiss overlay), dynamic test data.
+
+Never: change an expected value, remove, skip or weaken an assertion, delete a recorded
+step, add force:true, raise global timeouts, or wrap steps in try/catch.
+
+Stop and report (do not "fix") when: the same failure repeats after a fix; the only way
+to pass is changing an assertion; or the app behaves differently from the recording.
+Those are signs of a real change or bug, not a capture problem.</code></pre>
+          </div>
+
+          <div class="callout warning">
+            <div class="callout-icon">⚠️</div>
+            <div class="callout-content">
+              <strong>Лікування працює, бо запис доводить, що сценарій проходить.</strong> Це правда, лише доки застосунок і дані відповідають запису. Генеруйте та лікуйте тест одразу після запису, на тому ж середовищі. Ніколи не дозволяйте циклу змінювати <em>що</em> перевіряється — лише <em>як</em> тест туди доходить. Інакше «лікування» тихо ховає справжні баги.
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <div class="callout-icon">💡</div>
+            <div class="callout-content">
+              <strong>Заглушки:</strong> усе, що позначено <code>[YOUR: …]</code>, і назви класів у прикладах належать проєкту однієї команди. Замініть їх на власні базові класи, папки та хелпери.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Module 7 (Options) ================= -->
+      <section class="section-block" id="sec-6">
+        <div class="lang-en">
+          <h2 class="module-title">7. Options & Settings</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            The Options menu gives you deep control. You can set attribute priorities, customize AI prompt templates, and configure page and component tags. It runs a mathematical scoring algorithm to create durable locators.
+          </div>
+
+          <h3 class="sub-title">Attribute Priorities & Element Context Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>06_attribute_priorities.gif</span><span>Timestamp: 02:24 - 02:40</span></div>
+            <img loading="lazy" src="media/06_attribute_priorities.gif" alt="Attribute Priorities">
+          </div>
+
+          <h3 class="sub-title">Semantic Extraction Rules & Relational Context</h3>
+          <p>In Settings, drag attributes up or down to set priority (e.g. <code>data-testid</code>, <code>id</code>, <code>name</code>). If an element lacks unique attributes, the algorithm binds to neighboring sibling elements, direct parents, and ancestor chains.</p>
+
+          <h3 class="sub-title">All Settings at a Glance</h3>
+          <div class="media-card">
+            <div class="media-header"><span>11_hierarchy_settings.gif</span><span>Timestamp: 02:37 - 02:52</span></div>
+            <img loading="lazy" src="media/11_hierarchy_settings.gif" alt="Hierarchy settings">
+          </div>
+
+          <ul>
+            <li><strong>Locator Attributes:</strong> the priority list above. Wildcards like <code>data-*</code> match any attribute with that prefix. Built-in entries can be reordered but not removed.</li>
+            <li><strong>Description Anchors:</strong> which text sources name a step: <code>innerText</code>, <code>aria-label</code>, <code>placeholder</code>, <code>value</code>, <code>title</code> and so on, in priority order.</li>
+            <li><strong>Description & Locator Hierarchy:</strong> how far around the element the tool looks: <code>0</code> exact element, <code>1</code> closest upper sibling, <code>1+</code> all upper siblings, <code>2</code> closest parent, <code>2+</code> parents and their upper siblings, <code>3</code> grandparent, <code>3+</code> grandparent and higher.</li>
+            <li><strong>AI Prompt Template:</strong> edit the prompt used on the export screen.</li>
+            <li><strong>Page Recognition / Component Recognition:</strong> CSS selector + tag rules (see below).</li>
+            <li><strong>Appearance:</strong> dark theme and font size (small, medium, large).</li>
+            <li><strong>Debug Mode:</strong> shows extra details, such as how many requests each step triggered and the selector score log in the page console.</li>
+          </ul>
+
+          <h3 class="sub-title">Page Recognition & Component Tags Demo</h3>
+          <div class="media-card">
+            <div class="media-header"><span>07_page_objects_components.gif</span><span>Timestamp: 03:20 - 03:42</span></div>
+            <img loading="lazy" src="media/07_page_objects_components.gif" alt="Page Recognition & Component Tags">
+          </div>
+
+          <h3 class="sub-title">Page and Component Recognition</h3>
+          <ul>
+            <li><strong>Page Recognition (A/B Testing):</strong> Assign unique tags and CSS locators to different page design variants. CSS means Cascading Style Sheets. This is the code that controls visual styles on a web page.</li>
+            <li><strong>Component Recognition for POM:</strong> POM means Page Object Model. This is a design pattern where each page is an independent code class. Assign unique locator tags to reusable components (like navigation bars or modals). During code generation, component methods move into a dedicated Component class.</li>
+          </ul>
+
+          <h3 class="sub-title" id="scoring-table" data-target-id="scoring-table">Under the Hood: Locator Scoring Algorithm</h3>
+          <p>The algorithm scores every possible selector. Lower scores are better.</p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Strategy Type</th>
+                  <th>Description</th>
+                  <th>Base Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Custom Attributes</strong></td>
+                  <td>Attributes from the Locator Attributes list (like <code>data-testid</code>). Scored by position: 1st = 1, 2nd = 6, 3rd = 11, and so on.</td>
+                  <td><strong>1 - 50</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Semantic Identifiers</strong></td>
+                  <td>Accessible role, label text, or unique visible words.</td>
+                  <td><strong>50+</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Sibling Anchor</strong></td>
+                  <td>A neighboring element that has a unique ID.</td>
+                  <td><strong>65</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Parent Scoped</strong></td>
+                  <td>The direct parent container has a unique attribute.</td>
+                  <td><strong>70</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Deep Ancestors</strong></td>
+                  <td>Ancestor elements higher in the tree (+8 points per level).</td>
+                  <td><strong>70 - 94</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Structural Fallback</strong></td>
+                  <td>Absolute paths or <code>nth-child</code> selectors (last choice).</td>
+                  <td><strong>85 - 95</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4>Penalty Table</h4>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Penalty Reason</th>
+                  <th>Description</th>
+                  <th>Added Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Not Unique</strong></td>
+                  <td>Selector matches more than one visible element. Instantly rejected.</td>
+                  <td><strong>+1000</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Positional Brittleness</strong></td>
+                  <td>Uses <code>nth-child</code> or <code>nth-of-type</code> (breaks when lists change).</td>
+                  <td><strong>+15</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Deep Chains</strong></td>
+                  <td>Long CSS chains (like <code>div &gt; ul &gt; li &gt; span &gt; a</code>).</td>
+                  <td><strong>+3</strong> / level</td>
+                </tr>
+                <tr>
+                  <td><strong>Long Selectors</strong></td>
+                  <td>Selectors longer than 40 characters.</td>
+                  <td><strong>+2</strong> / 20 chars</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">7. Налаштування та Алгоритми локаторів</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Меню налаштувань дає повний контроль. Ви можете змінювати пріоритети атрибутів, налаштовувати шаблони промптів і задавати теги для класів Page Object. Алгоритм математично оцінює селектори для створення найнадійніших шляхів.
+          </div>
+
+          <h3 class="sub-title">Відеодемонстрація: Пріоритети атрибутів та зв'язки елементів</h3>
+          <div class="media-card">
+            <div class="media-header"><span>06_attribute_priorities.gif</span><span>Таймкод: 02:24 - 02:40</span></div>
+            <img loading="lazy" src="media/06_attribute_priorities.gif" alt="Attribute Priorities">
+          </div>
+
+          <h3 class="sub-title">Правила збору атрибутів та контекст</h3>
+          <p>У налаштуваннях можна перетягувати атрибути вгору або вниз (наприклад, поставити <code>data-testid</code> першим). Якщо сам елемент не має сильних атрибутів, система прив'язується до сусідніх блоків (siblings) або найближчих батьківських елементів.</p>
+
+          <h3 class="sub-title">Усі налаштування коротко</h3>
+          <div class="media-card">
+            <div class="media-header"><span>11_hierarchy_settings.gif</span><span>Таймкод: 02:37 - 02:52</span></div>
+            <img loading="lazy" src="media/11_hierarchy_settings.gif" alt="Hierarchy settings">
+          </div>
+
+          <ul>
+            <li><strong>Locator Attributes:</strong> список пріоритетів вище. Шаблони на кшталт <code>data-*</code> підходять до будь-якого атрибута з цим префіксом. Вбудовані пункти можна переставляти, але не видаляти.</li>
+            <li><strong>Description Anchors:</strong> з яких джерел тексту береться назва кроку: <code>innerText</code>, <code>aria-label</code>, <code>placeholder</code>, <code>value</code>, <code>title</code> тощо, у порядку пріоритету.</li>
+            <li><strong>Description & Locator Hierarchy:</strong> наскільки далеко навколо елемента шукати: <code>0</code> сам елемент, <code>1</code> найближчий верхній сусід, <code>1+</code> усі верхні сусіди, <code>2</code> найближчий батько, <code>2+</code> батьки та їхні верхні сусіди, <code>3</code> прабатько, <code>3+</code> прабатько і вище.</li>
+            <li><strong>AI Prompt Template:</strong> редагування промпту для екрану експорту.</li>
+            <li><strong>Page Recognition / Component Recognition:</strong> правила «CSS-селектор + тег» (див. нижче).</li>
+            <li><strong>Appearance:</strong> темна тема та розмір шрифту (small, medium, large).</li>
+            <li><strong>Debug Mode:</strong> показує додаткові деталі, наприклад кількість запитів на кожному кроці та журнал оцінок селекторів у консолі сторінки.</li>
+          </ul>
+
+          <h3 class="sub-title">Відеодемонстрація: Розпізнавання сторінок та компонентів</h3>
+          <div class="media-card">
+            <div class="media-header"><span>07_page_objects_components.gif</span><span>Таймкод: 03:20 - 03:42</span></div>
+            <img loading="lazy" src="media/07_page_objects_components.gif" alt="Page Recognition & Component Tags">
+          </div>
+
+          <h3 class="sub-title">Сторінки та Компоненти</h3>
+          <ul>
+            <li><strong>Розпізнавання сторінок (A/B тестування):</strong> Задавайте унікальні теги та CSS-локатори для різних варіантів дизайну однієї сторінки.</li>
+            <li><strong>Розпізнавання компонентів для POM:</strong> POM (Page Object Model) — це шаблон розробки, де кожна сторінка має окремий клас у коді. Задавайте теги для повторюваних частин (наприклад, шапка сайту або модальне вікно). Під час генерації коду їхні методи винесуться в окремі класи компонентів.</li>
+          </ul>
+
+          <h3 class="sub-title" data-target-id="scoring-table">Під капотом: Алгоритм оцінки локаторів</h3>
+          <p>Алгоритм вираховує бал для кожного можливого CSS-селектора. Чим менший бал, тим надійніший локатор.</p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Тип стратегії</th>
+                  <th>Опис</th>
+                  <th>Базовий бал</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Спеціальні атрибути</strong></td>
+                  <td>Атрибути зі списку Locator Attributes (наприклад, <code>data-testid</code>). Бал за позицією: 1-й = 1, 2-й = 6, 3-й = 11 і так далі.</td>
+                  <td><strong>1 - 50</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Семантичні ідентифікатори</strong></td>
+                  <td>Роль елемента, доступна назва чи унікальний видимий текст.</td>
+                  <td><strong>50+</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Сусідній якір</strong></td>
+                  <td>Сусідній елемент у дереві, який має унікальний ID.</td>
+                  <td><strong>65</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Батьківський контейнер</strong></td>
+                  <td>Безпосередній батьківський блок має унікальний атрибут.</td>
+                  <td><strong>70</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Глибокі предки</strong></td>
+                  <td>Елементи вище по дереву (+8 балів за кожен рівень глибини).</td>
+                  <td><strong>70 - 94</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Структурні варіанти</strong></td>
+                  <td>Абсолютні шляхи або селектори <code>nth-child</code> (останній вибір).</td>
+                  <td><strong>85 - 95</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4>Таблиця штрафів</h4>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Причина штрафу</th>
+                  <th>Чому це погано</th>
+                  <th>Штрафні бали</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Не унікальний</strong></td>
+                  <td>Знаходить більше одного елемента на екрані. Одразу відхиляється.</td>
+                  <td><strong>+1000</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Позиційна крихкість</strong></td>
+                  <td>Використовує <code>nth-child</code> (ламається при додаванні нових рядків).</td>
+                  <td><strong>+15</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Довгі ланцюжки</strong></td>
+                  <td>Довгі зв'язки на зразок <code>div &gt; ul &gt; li &gt; span &gt; a</code>.</td>
+                  <td><strong>+3</strong> / рівень</td>
+                </tr>
+                <tr>
+                  <td><strong>Довгі селектори</strong></td>
+                  <td>Селектори довші за 40 символів.</td>
+                  <td><strong>+2</strong> / 20 символів</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Module 8 ================= -->
+      <section class="section-block" id="sec-help">
+        <div class="lang-en">
+          <h2 class="module-title">8. Privacy & Troubleshooting</h2>
+          <div class="tldr-card">
+            <strong>TL;DR:</strong>
+            Everything stays in your browser. Nothing is sent to any server. Most problems come from recording in the wrong tab or picking on the wrong page.
+          </div>
+
+          <h3 class="sub-title">Privacy & Permissions</h3>
+          <ul>
+            <li>Recordings and settings are stored only in <code>chrome.storage.local</code>. Nothing is transmitted. Password values are masked.</li>
+            <li>The extension asks for access to all sites because you can test any site: staging, internal, local or production. It stays idle until you start a recording, and only the recorded tab (and tabs it opens) is captured.</li>
+            <li>To delete data, use <strong>Reset</strong> in the panel or uninstall the extension.</li>
+          </ul>
+
+          <h3 class="sub-title">Troubleshooting</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Problem</th><th>What to do</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>"Open … in the browser first"</strong></td><td>A container or element must come from the step's own page. Open that page, then pick again.</td></tr>
+                <tr><td><strong>Nothing is recorded</strong></td><td>Check that recording is not paused and that you are acting in the recorded tab (or a tab it opened).</td></tr>
+                <tr><td><strong>Wrong or duplicate element in the export</strong></td><td>Add a container to the step, or move <code>data-testid</code> (or your team's test attribute) higher in Locator Attributes.</td></tr>
+                <tr><td><strong>Step names are unclear</strong></td><td>Pick a better suggestion in the Description Picker, or tune Description Anchors and Hierarchy in Settings.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lang-ua">
+          <h2 class="module-title">8. Приватність та вирішення проблем</h2>
+          <div class="tldr-card">
+            <strong>Коротко про головне:</strong>
+            Усе залишається у вашому браузері. Нічого не надсилається на сервери. Більшість проблем виникає через запис не в тій вкладці або вибір елемента не на тій сторінці.
+          </div>
+
+          <h3 class="sub-title">Приватність та дозволи</h3>
+          <ul>
+            <li>Записи та налаштування зберігаються лише в <code>chrome.storage.local</code>. Нічого не передається. Паролі маскуються.</li>
+            <li>Розширення просить доступ до всіх сайтів, бо тестувати можна будь-який сайт: staging, внутрішній, локальний чи production. Воно неактивне, доки ви не почнете запис, і записує лише записувану вкладку (та вкладки, відкриті з неї).</li>
+            <li>Щоб видалити дані, натисніть <strong>Reset</strong> у панелі або видаліть розширення.</li>
+          </ul>
+
+          <h3 class="sub-title">Вирішення проблем</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Проблема</th><th>Що робити</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>«Open … in the browser first»</strong></td><td>Контейнер чи елемент має бути зі сторінки цього кроку. Відкрийте цю сторінку і виберіть знову.</td></tr>
+                <tr><td><strong>Нічого не записується</strong></td><td>Перевірте, що запис не на паузі і ви працюєте в записуваній вкладці (або відкритій з неї).</td></tr>
+                <tr><td><strong>Неправильний або дубльований елемент в експорті</strong></td><td>Додайте до кроку контейнер або підніміть <code>data-testid</code> (чи тестовий атрибут вашої команди) вище в Locator Attributes.</td></tr>
+                <tr><td><strong>Незрозумілі назви кроків</strong></td><td>Виберіть кращий варіант у Description Picker або налаштуйте Description Anchors та Hierarchy.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Right Table of Contents Sidebar -->
+    <aside class="wiki-toc">
+      <div class="toc-title">
+        <span class="lang-en">On this page</span>
+        <span class="lang-ua">На цій сторінці</span>
+      </div>
+      <ul class="toc-links">
+        <li>
+          <a href="#sec-start">
+            <span class="lang-en">0. Getting Started</span>
+            <span class="lang-ua">0. Початок роботи</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-1">
+            <span class="lang-en">1. Introduction & Philosophy</span>
+            <span class="lang-ua">1. Вступ та Філософія</span>
+          </a>
+        </li>
+        <li>
+          <a href="#golden-mean">
+            <span class="lang-en">&mdash; The Golden Mean</span>
+            <span class="lang-ua">&mdash; Золота середина</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-2">
+            <span class="lang-en">2. Recording Actions</span>
+            <span class="lang-ua">2. Запис дій</span>
+          </a>
+        </li>
+        <li>
+          <a href="#step-types">
+            <span class="lang-en">&mdash; Four Step Types</span>
+            <span class="lang-ua">&mdash; 4 типи кроків</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-3">
+            <span class="lang-en">3. Assertions & Containers</span>
+            <span class="lang-ua">3. Перевірки та Контейнери</span>
+          </a>
+        </li>
+        <li>
+          <a href="#container-nav">
+            <span class="lang-en">&mdash; Container Traversal</span>
+            <span class="lang-ua">&mdash; Навігація контейнерами</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-4">
+            <span class="lang-en">4. Organizing & Editing</span>
+            <span class="lang-ua">4. Організація та Редагування</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-5">
+            <span class="lang-en">5. Exporting Content</span>
+            <span class="lang-ua">5. Експорт контенту</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-code">
+            <span class="lang-en">6. Automation Code</span>
+            <span class="lang-ua">6. Генерація автотестів</span>
+          </a>
+        </li>
+        <li>
+          <a href="#heal-loop">
+            <span class="lang-en">&mdash; Generate → Run → Heal</span>
+            <span class="lang-ua">&mdash; Цикл лікування</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-6">
+            <span class="lang-en">7. Options & Settings</span>
+            <span class="lang-ua">7. Налаштування</span>
+          </a>
+        </li>
+        <li>
+          <a href="#scoring-table">
+            <span class="lang-en">&mdash; Locator Scoring</span>
+            <span class="lang-ua">&mdash; Оцінка локаторів</span>
+          </a>
+        </li>
+        <li>
+          <a href="#sec-help">
+            <span class="lang-en">8. Privacy & Troubleshooting</span>
+            <span class="lang-ua">8. Приватність та Проблеми</span>
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+  </div>
+
+  <!-- Search Modal -->
+  <div class="search-modal" id="search-modal">
+    <div class="search-box">
+      <div class="search-box-header">
+        <span>🔍</span>
+        <input type="text" id="search-input" placeholder="Search documentation / Пошук у документації..." autofocus>
+        <button class="icon-btn" id="close-search">✕</button>
+      </div>
+      <div class="search-results" id="search-results">
+        <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">
+          <span class="lang-en">Type keywords to search across all modules...</span>
+          <span class="lang-ua">Введіть ключові слова для пошуку по всіх модулях...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Language Switcher Logic
+    const btnEn = document.getElementById('btn-lang-en');
+    const btnUa = document.getElementById('btn-lang-ua');
+    const savedLang = localStorage.getItem('wiki-lang') || 'en';
+
+    function updateAnchorTargets(lang) {
+      const targetIds = ['golden-mean', 'step-types', 'container-nav', 'heal-loop', 'scoring-table'];
+      const otherLang = lang === 'en' ? 'ua' : 'en';
+      targetIds.forEach(id => {
+        const oldEl = document.querySelector(`.lang-${otherLang} [data-target-id="${id}"]`);
+        if (oldEl) oldEl.removeAttribute('id');
+        const newEl = document.querySelector(`.lang-${lang} [data-target-id="${id}"]`);
+        if (newEl) newEl.setAttribute('id', id);
+      });
+    }
+
+    function setLanguage(lang) {
+      document.body.setAttribute('data-lang', lang);
+      localStorage.setItem('wiki-lang', lang);
+      if (lang === 'en') {
+        btnEn.classList.add('active');
+        btnUa.classList.remove('active');
+      } else {
+        btnUa.classList.add('active');
+        btnEn.classList.remove('active');
+      }
+      updateAnchorTargets(lang);
+      buildSearchIndex();
+    }
+
+    btnEn.addEventListener('click', () => setLanguage('en'));
+    btnUa.addEventListener('click', () => setLanguage('ua'));
+    setLanguage(savedLang);
+
+    // Theme Switcher with persistence
+    const themeBtn = document.getElementById('toggle-theme');
+    const currentTheme = localStorage.getItem('wiki-theme') || 'light';
+    document.body.setAttribute('data-theme', currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      const active = document.body.getAttribute('data-theme');
+      const next = active === 'light' ? 'dark' : 'light';
+      document.body.setAttribute('data-theme', next);
+      localStorage.setItem('wiki-theme', next);
+    });
+
+    // Mobile sidebar toggle
+    const menuBtn = document.getElementById('toggle-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    if (menuBtn) {
+      menuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+
+    // Scroll progress bar & active sidebar links
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      const sections = document.querySelectorAll('section.section-block');
+      let currentId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Nav-link click handler for smooth scrolling across languages
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const targetId = href.substring(1);
+          const currentLang = document.body.getAttribute('data-lang') || 'en';
+          let targetEl = document.getElementById(targetId);
+          if (!targetEl || targetEl.offsetParent === null) {
+            targetEl = document.querySelector(`.lang-${currentLang} [data-target-id="${targetId}"]`) || document.getElementById(targetId);
+          }
+          if (targetEl) {
+            e.preventDefault();
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            history.pushState(null, '', href);
+          }
+        }
+        if (sidebar && sidebar.classList.contains('open')) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Search Modal
+    const searchModal = document.getElementById('search-modal');
+    const openSearchBtn = document.getElementById('open-search');
+    const closeSearchBtn = document.getElementById('close-search');
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+
+    function openSearch() {
+      searchModal.classList.add('open');
+      searchInput.value = '';
+      searchInput.focus();
+      renderSearchResults('');
+    }
+
+    function closeSearch() {
+      searchModal.classList.remove('open');
+    }
+
+    openSearchBtn.addEventListener('click', openSearch);
+    closeSearchBtn.addEventListener('click', closeSearch);
+    searchModal.addEventListener('click', (e) => {
+      if (e.target === searchModal) closeSearch();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openSearch();
+      }
+      if (e.key === 'Escape' && searchModal.classList.contains('open')) {
+        closeSearch();
+      }
+    });
+
+    // Language-aware search index
+    let searchIndex = [];
+    function buildSearchIndex() {
+      searchIndex = [];
+      const currentLang = document.body.getAttribute('data-lang');
+      document.querySelectorAll('section.section-block').forEach(sec => {
+        const secId = sec.id;
+        const langContainer = sec.querySelector(`.lang-${currentLang}`);
+        if (!langContainer) return;
+
+        const secTitle = langContainer.querySelector('h2') ? langContainer.querySelector('h2').innerText : '';
+        const paragraphs = langContainer.querySelectorAll('p, h3, h4, li');
+        paragraphs.forEach(p => {
+          const text = p.innerText.trim();
+          if (text.length > 15) {
+            searchIndex.push({
+              id: secId,
+              section: secTitle,
+              text: text
+            });
+          }
+        });
+      });
+    }
+
+    function renderSearchResults(query) {
+      const currentLang = document.body.getAttribute('data-lang');
+      if (!query.trim()) {
+        const hint = currentLang === 'ua'
+          ? 'Введіть ключові слова для пошуку по всіх модулях...'
+          : 'Type keywords to search across all modules...';
+        searchResults.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">${hint}</div>`;
+        return;
+      }
+      const q = query.toLowerCase();
+      const matches = searchIndex.filter(item => item.text.toLowerCase().includes(q) || item.section.toLowerCase().includes(q)).slice(0, 8);
+
+      if (matches.length === 0) {
+        const noRes = currentLang === 'ua'
+          ? `Нічого не знайдено за запитом "${query}"`
+          : `No results found for "${query}"`;
+        searchResults.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">${noRes}</div>`;
+        return;
+      }
+
+      searchResults.innerHTML = matches.map(m => {
+        const preview = m.text.length > 90 ? m.text.substring(0, 90) + '...' : m.text;
+        return `
+          <a href="#${m.id}" class="search-item" onclick="closeSearch()">
+            <div class="search-item-title">${m.section}</div>
+            <div class="search-item-preview">${preview}</div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    searchInput.addEventListener('input', (e) => {
+      renderSearchResults(e.target.value);
+    });
+
+    // Automatic fallback image resolution
+    document.querySelectorAll('img').forEach(img => {
+      img.addEventListener('error', function() {
+        const fallback = this.getAttribute('data-fallback');
+        if (fallback && this.src.indexOf(fallback) === -1) {
+          this.src = fallback;
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

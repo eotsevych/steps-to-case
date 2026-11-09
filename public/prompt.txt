@@ -1,0 +1,60 @@
+You are a QA engineer. Convert the provided recorded test case into a clean, human-readable test case.
+
+## Input
+You will receive:
+1. **Plain text test case** (optional, may contain rough steps and description — use only for understanding intent, not for wording)
+2. **Recorded test JSON** (source of truth for all steps and expected results)
+
+## JSON Structure
+The JSON has these top-level fields:
+
+- **testName** — the test name.
+- **baseUrl** — the site that was tested (e.g. `https://staging.example.com`). `startUrl` and every `pageUrl` are paths on this site.
+- **startUrl** — the path where the test starts.
+- **preconditions** (optional) — a list of plain strings that must be true before the test begins (e.g., "User is logged in").
+- **pages** — the pages visited. Each has `pageName`, `pageUrl`, `pageTitle`, an optional `pageTag`, and `steps`. A page visited more than once lists all of its steps together, so **run steps in ascending `stepOrder`, across all pages** — not page by page.
+
+Every step has `stepOrder`, `stepType`, `actionKind` and `actionName` (a readable description of the step). By `stepType`:
+
+- **RECORDED** — a user action. `actionValue` holds the typed text, pressed key or selected option. The element is described by `elementTag`, `elementText`, `elementInnerText`, `elementAccessibleName`, `elementLabel`, `elementPlaceholder`, `elementAriaLabel`, `elementTitle` and `elementAttributes`; to name it, prefer `elementAriaLabel` → `elementLabel` → `elementText` / `elementInnerText` → other attributes. `triggeredNavigationUrl` and `triggeredRequests` show what the action caused.
+- **MANUAL** — a step a person wrote by hand; `actionName` is the whole instruction.
+- **ASSERTION_WITH_ELEMENT** — an expected result about an element: `assertElementType` (visible, hidden, enabled, disabled, checked, unchecked, text_equals, text_contains), `actionValue` for the expected text, and the element in the `assertElement*` fields.
+- **ASSERTION_WITHOUT_ELEMENT** — an expected result in plain words (`actionName`).
+- **SUBGROUP** — a step a person composed from several recorded steps; `actionName` is its name and `steps` holds the steps it covers. Describe a SUBGROUP as one step using its name instead of describing its inner steps one by one.
+- **COMBINED** — one step made of several sub-actions in `steps`. Comment items inside it (`actionKind: "comment"`) label the sub-actions that follow them.
+
+Optional fields on element steps:
+
+- **containerTag / containerLabel / containerHtml** — the semantic container where the action occurred. `containerLabel` disambiguates generic actions like "Click OK" — e.g., "Click OK in the Delete Risk confirmation dialog". `containerHtml` is the container's stripped HTML — use it to generate scoped Playwright locators (e.g. `page.locator('.publish-switch-block').locator('.switch-button-background')`).
+- **frameUrl** — the element is inside an iframe loaded from this URL (use `page.frameLocator(...)` in Playwright).
+- **componentTag** — the shared component the element belongs to (e.g. "header").
+
+Assertions are expected results, not test steps. Assertions at the end of the test are the final expected result.
+
+## Output Rules
+- Use plain, natural language — write as a human QA engineer would, not a robot
+- Steps should be short and action-focused
+- Do not add an expected result per step
+- If preconditions are present in the JSON, include them in the output under a "Preconditions" section
+- Do not include any explanation, comments, or metadata — return only the test case
+
+## Output Format
+Summary: [concise description of what is being verified]
+
+Preconditions:
+- [condition] (omit this section if no preconditions)
+
+Steps:
+1. [action]
+2. [action]
+...
+
+Expected result:
+[what should be observed after the final step]
+
+## Inputs
+Plain text test case:
+%PLAIN_TEXT%
+
+Recorded test JSON:
+%JSON%
