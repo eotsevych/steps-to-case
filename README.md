@@ -7,7 +7,7 @@ StepsToCase is a Chrome extension for QA engineers. You walk through a test in t
 <p>
   <a href="https://eotsevych.github.io/steps-to-case/"><strong>📖 Documentation & video guide</strong></a>
   &nbsp;·&nbsp;
-  <a href="CHROME_WEB_STORE_URL"><strong>🧩 Install from the Chrome Web Store</strong></a>
+  <a href="https://chromewebstore.google.com/detail/stepstocase/eekhjmlfbikagoennaldhdbliogklfec"><strong>🧩 Install from the Chrome Web Store</strong></a>
   &nbsp;·&nbsp;
   <a href="https://eotsevych.github.io/steps-to-case/privacy">🔒 Privacy policy</a>
 </p>
@@ -76,6 +76,10 @@ Content script ──ACTION_CAPTURED──► Service worker ──STATE_UPDATED
 ```
 
 `@/*` maps to `src/*` (in `tsconfig.json` and `vite.config.ts`). The documentation site lives in `docs/` and is published with GitHub Pages.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) (in Ukrainian).
 
 ## License
 
