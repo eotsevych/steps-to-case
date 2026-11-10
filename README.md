@@ -79,7 +79,7 @@ Content script ──ACTION_CAPTURED──► Service worker ──STATE_UPDATED
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) (in Ukrainian).
+See [CHANGELOG.md](CHANGELOG.md) (English and Ukrainian).
 
 ## License
 
