@@ -3,6 +3,7 @@
 ## 1.0.2 — November 2026 · листопад 2026
 
 First public version in the [Chrome Web Store](https://chromewebstore.google.com/detail/stepstocase/eekhjmlfbikagoennaldhdbliogklfec).
+
 Перша публічна версія в [Chrome Web Store](https://chromewebstore.google.com/detail/stepstocase/eekhjmlfbikagoennaldhdbliogklfec).
 
 ### English
