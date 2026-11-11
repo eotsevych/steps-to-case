@@ -53,7 +53,6 @@ export function parseRecordedPageContext(rawUrl: string, title = ''): PageContex
       title,
       domain: parsed.hostname,
       pathname,
-      ...(parsed.search ? { query: parsed.search } : {}),
     };
   } catch {
     const normalized = normalizeRecordedPageUrl(rawUrl);

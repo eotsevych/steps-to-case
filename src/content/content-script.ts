@@ -740,15 +740,7 @@ function sendAction(type: ActionType, el: Element, extra?: Record<string, unknow
   const element = collectElementInfo(el);
   const page = collectPageContext();
   // Inside an iframe: the worker swaps in the tab's page; keep which frame the selectors belong to
-  if (!IS_TOP_FRAME) {
-    page.frameUrl = location.href.split(/[?#]/)[0];
-    // A srcdoc/document.write frame reports its parent's URL, so the <iframe> element is the only way to name it.
-    // frameElement is null for cross-origin frames; window.name still carries the name attribute there.
-    const frameEl = window.frameElement;
-    if (frameEl?.id) page.frameId = frameEl.id;
-    const frameName = frameEl?.getAttribute('name') || window.name;
-    if (frameName) page.frameName = frameName;
-  }
+  if (!IS_TOP_FRAME) page.frameUrl = location.href.split(/[?#]/)[0];
 
   // Page recognition: check rules and tag the page context
   for (const rule of pageRecognitionRules) {
