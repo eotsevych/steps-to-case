@@ -15,14 +15,14 @@ Source of truth: `ExportRecording` and `ExportSingleStep` in `src/types/index.ts
 {
   "testName": "Create order",
   "baseUrl": "https://staging.example.com",   // origin of the tab where recording started
-  "startUrl": "/login?next=%2Forders",        // path + query on baseUrl (query only in newer exports)
+  "startUrl": "/login?next=%2Forders",        // path + query on baseUrl (query from StepsToCase 1.1.0)
   "preconditions": ["User is logged in as admin"], // optional, plain strings
   "pages": [{
     "pageOrder": 1,
     "pageName": "Orders",            // human name, often from the URL ("/orders/123" -> "orders")
     "pageUrl": "/orders",            // path (+ "#/route" for hash routers), never a query string
     "pageTitle": "Orders | Shop",
-    "pageDomain": "shop.example.com", // host of the page (newer exports)
+    "pageDomain": "shop.example.com", // host of the page (StepsToCase 1.1.0+)
     "pageTag": "newdesign",          // optional, from the user's page recognition rules
     "steps": [ /* see step types */ ]
   }]
@@ -95,9 +95,9 @@ Assertion steps have the same fields with the `assertElement` prefix (`assertEle
 | `triggeredNavigationUrl` / `triggeredNavigationTitle` | Page the action opened |
 | `triggeredRequests` | Up to 3 fetch/XHR calls to the app's own host or a sibling host, made after the action: `{url, status}`. `url` is a path, or `host/path` for a sibling host such as `api.example.com/orders`. There is **no HTTP method**: the browser API that records them does not expose it. Many are noise; see "Quirks" |
 | `frameUrl` | The element is inside an iframe loaded from this URL |
-| `frameId` / `frameName` | `id` / `name` of that `<iframe>` element (newer exports; `frameId` only for same-origin frames) |
-| `pageQuery` | Query string of the page the step ran on, for example `?filename=tryhtml_select` (newer exports). Secret-looking values are masked as `••••••••` |
-| `tab` | The browser tab the step ran in: `2` = the first tab opened during the recording, `3` = the next. Absent = the starting tab (newer exports) |
+| `frameId` / `frameName` | `id` / `name` of that `<iframe>` element (StepsToCase 1.1.0+; `frameId` only for same-origin frames) |
+| `pageQuery` | Query string of the page the step ran on, for example `?filename=tryhtml_select` (StepsToCase 1.1.0+). Secret-looking values are masked as `••••••••` |
+| `tab` | The browser tab the step ran in: `2` = the first tab opened during the recording, `3` = the next. Absent = the starting tab (StepsToCase 1.1.0+) |
 | `containerTag` / `containerLabel` / `containerHtml` | The container the user picked for a repeated element (row, card, dialog). `containerHtml` is stripped HTML: no scripts, styles or SVG, attributes cut at 100 characters, at most 2000 characters |
 | `componentTag` | Shared component (`header`, `nav`, ...) from the user's component recognition rules |
 
@@ -114,14 +114,14 @@ A recording captures what the browser saw, including noise. Apply these rules be
 - **Navigation can be filed one step late.** The navigation caused by step N can show up as `triggeredNavigationUrl` / `actionValue` of step N+1, and the step right after a navigation can be listed under the previous page. The order of pages is the truth: when the next step's page has a different `pageUrl`, the step before it caused that navigation. If an element clearly belongs to the next page (for example, a "Copy install prompt" button listed under the search page), put it there.
 - **Steps of one page can be split by another page.** A page visited twice is listed once, so its `stepOrder` values can have gaps (13, 15, 16 on one page, 14 on another). Page objects are grouped by page. The test is ordered by `stepOrder`.
 - **A `SUBGROUP` can cross pages** (it expands a section, then clicks "Home"). Put its method on the page where it starts. If methods return the next page object, it returns the page where it ends.
-- **`pageUrl` has no query string.** Two different pages with the same path (`/tags/tryit.asp?filename=tryhtml_select` and `...?filename=tryhtml_iframe`) are merged into one recorded page. Each step's `pageQuery` tells them apart, and `startUrl` has its query. Older exports have neither: get the full URL from the `href` of the link that opened the page, and if the start page needs a query string, report it and use the project's URL or ask. A query value of `••••••••` is a masked secret: take the real value from the project's test data.
+- **`pageUrl` has no query string.** Two different pages with the same path (`/tags/tryit.asp?filename=tryhtml_select` and `...?filename=tryhtml_iframe`) are merged into one recorded page. Each step's `pageQuery` tells them apart, and `startUrl` has its query. Exports from 1.0.x have neither: get the full URL from the `href` of the link that opened the page, and if the start page needs a query string, report it and use the project's URL or ask. A query value of `••••••••` is a masked secret: take the real value from the project's test data.
 - **"Navigation" to the current page URL** (`triggeredNavigationUrl` equal to the step's own `pageUrl`) is no navigation.
 - **Navigation that no step caused.** The user typed in the address bar, used Back, or opened a bookmark. Signs: the next page is not where the clicked element leads (its `href` points elsewhere, it is a tab or a wrapper, or the next page is on another site). The step before it still gets the URL as `triggeredNavigationUrl`. Write an explicit navigation to that page (full URL if known).
 
 ### Several sites and tabs
 
-- **Several sites.** When a recording leaves `baseUrl`'s site (GitHub -> Google -> W3Schools), `pageDomain` says which site each page is on. Older exports have no `pageDomain`: find the site from the absolute `href` of the link that led there, from `frameUrl`, or from `pageTitle` ("... - Google Search"). Generate those steps too: deciding what belongs in the test is the user's job.
-- **New tabs.** A click on a link with `target="_blank"` (or `window.open`) opens a new tab. The `tab` field says which tab each step ran in; the step before the first step with a new `tab` value opened it. Older exports have no `tab`, so follow the tabs yourself:
+- **Several sites.** When a recording leaves `baseUrl`'s site (GitHub -> Google -> W3Schools), `pageDomain` says which site each page is on. Exports from 1.0.x have no `pageDomain`: find the site from the absolute `href` of the link that led there, from `frameUrl`, or from `pageTitle` ("... - Google Search"). Generate those steps too: deciding what belongs in the test is the user's job.
+- **New tabs.** A click on a link with `target="_blank"` (or `window.open`) opens a new tab. The `tab` field says which tab each step ran in; the step before the first step with a new `tab` value opened it. Exports from 1.0.x have no `tab`, so follow the tabs yourself:
   - the steps on the page that the link's `href` leads to happen in the new tab;
   - a later step on a page of an earlier tab means the user switched back to that tab;
   - one recorded page can stand for two tabs (the same path opened twice). Use `stepOrder` and the link that opened each tab to tell them apart.
@@ -130,7 +130,7 @@ A recording captures what the browser saw, including noise. Apply these rules be
 
 ### Frames
 
-- `frameUrl` set: the element is inside an iframe. Locate the iframe by `frameId`, then `frameName`, then `frameUrl`. If `frameUrl` equals the page URL or is `about:blank`, the iframe has no URL of its own (it was built with `srcdoc` or `document.write`), so only `frameId` / `frameName` identify it. Without them (older exports, or an unnamed cross-origin iframe), find the iframe by its `id`, `name` or `title` in an existing page object, or in the live page. If neither is possible, write a TODO naming the step and say so in the reply.
+- `frameUrl` set: the element is inside an iframe. Locate the iframe by `frameId`, then `frameName`, then `frameUrl`. If `frameUrl` equals the page URL or is `about:blank`, the iframe has no URL of its own (it was built with `srcdoc` or `document.write`), so only `frameId` / `frameName` identify it. Without them (exports from 1.0.x, or an unnamed cross-origin iframe), find the iframe by its `id`, `name` or `title` in an existing page object, or in the live page. If neither is possible, write a TODO naming the step and say so in the reply.
 - `frameUrl` can be **missing** for an element that is inside an iframe (in the same recording, other steps in that iframe have it). If an element cannot be found on the page, look in its iframes.
 
 ### Elements and locators
