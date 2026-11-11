@@ -37,6 +37,13 @@ export function getElementName(action: Action): string {
     const metaName = el.accessibleName || textOrInner
       || el.label || el.placeholder || el.title || el.ariaLabel;
     if (metaName) return metaName;
+  } else {
+    // The description scan found no text, but the element's own name still beats a selector
+    // (an icon button named by aria-labelledby). accessibleName can also be ancestor text, so it
+    // is trusted only when the element points at its own name source.
+    const ownName = el.ariaLabel || el.label || el.title || el.placeholder
+      || (el.attributes?.['aria-labelledby'] || el.attributes?.alt ? el.accessibleName : '');
+    if (ownName) return ownName;
   }
 
   // 3. Try to extract a readable name from the primary selector

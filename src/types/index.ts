@@ -56,6 +56,9 @@ export interface PageContext {
   pathname: string;
   pageTag?: string; // Design/layout tag matched by page recognition rules
   frameUrl?: string; // Set when the step happened inside an iframe; selectors are relative to that frame
+  frameId?: string;   // id of that <iframe> element (same-origin frames only)
+  frameName?: string; // name of that <iframe> element
+  query?: string;     // the page URL's query string ("?tab=2"); url drops it so visits group into one page
 }
 
 export type SelectorType = 'testid' | 'role' | 'label' | 'placeholder' | 'text' | 'css' | 'id' | 'name' | 'aria' | 'href' | 'alt' | 'title' | 'data-attr' | 'sibling' | 'parent-scoped';
@@ -149,6 +152,7 @@ export interface Action {
   subStepName?: string; // Custom label for nested sub-actions
   containerContext?: ContainerContext;
   componentTag?: string; // Component tag matched by component recognition rules (e.g. "header", "nav")
+  tab?: number; // Browser tab the step ran in: 2 = the first tab opened during recording, ...; unset = the starting tab
 }
 
 // A precondition for the test — named requirement that must be true before the test starts
@@ -215,6 +219,7 @@ export interface RecordingState {
   baseUrl?: string;
   isElementPickerActive: boolean;
   pendingContainer?: ContainerContext; // set before an action to pre-assign container
+  tabIds?: number[]; // Chrome tab ids in the order the recording first used them; Action.tab is the index + 1
 }
 
 // Messages: Content Script <-> Background
@@ -297,6 +302,10 @@ export interface ExportActionStep {
   elementAttributes: Record<string, string>;
   selectorContextText: string;
   frameUrl?: string; // iframe the element lives in
+  frameId?: string;
+  frameName?: string;
+  pageQuery?: string; // query string of the page the step ran on, secrets masked
+  tab?: number; // 2+ = a tab opened during the recording; absent = the starting tab
   containerTag?: string;
   containerLabel?: string;
   containerHtml?: string;
@@ -331,6 +340,10 @@ export interface ExportAssertionStep {
   assertElementAttributes: Record<string, string>;
   assertSelectorContextText: string;
   frameUrl?: string; // iframe the element lives in
+  frameId?: string;
+  frameName?: string;
+  pageQuery?: string; // query string of the page the step ran on, secrets masked
+  tab?: number; // 2+ = a tab opened during the recording; absent = the starting tab
   containerTag?: string;
   containerLabel?: string;
   containerHtml?: string;
@@ -373,6 +386,7 @@ export interface ExportPage {
   pageName: string;
   pageUrl: string;
   pageTitle: string;
+  pageDomain?: string; // host of the page; pageUrl is a path on it
   pageTag?: string; // Design/layout tag from page recognition rules
   steps: ExportStep[];
 }
@@ -380,7 +394,7 @@ export interface ExportPage {
 export interface ExportRecording {
   testName: string;
   baseUrl?: string; // origin of the tested site; startUrl and pageUrl are paths on it
-  startUrl: string;
+  startUrl: string; // path + query on baseUrl, secrets masked
   preconditions?: string[];
   pages: ExportPage[];
 }

@@ -116,3 +116,48 @@ describe('export → load JSON → export', () => {
     expect(again.baseUrl).toBe('https://app.test');
   });
 });
+
+describe('step names', () => {
+  // The description scan ran (descriptionHierarchy set) and found no text around the element
+  const iconButton = (attributes: Record<string, string>, accessibleName: string) => action('i', 'app.test', {
+    element: { tagName: 'button', textContent: '', accessibleName, innerText: '', attributes },
+    selectors: { primary: { type: 'id', value: '#_R_2pt4b36_', score: 1 }, alternatives: [], contextText: '', descriptionHierarchy: '0' },
+  });
+  const name = (a: Action) => buildExportRecording(state([page('p', '/', [a], 0)])).pages[0].steps[0].actionName;
+
+  it("uses the element's own accessible name instead of its selector", () => {
+    expect(name(iconButton({ 'aria-labelledby': 'tip-1' }, 'Open Copilot menu'))).toBe('Click on "Open Copilot menu"');
+  });
+
+  it('does not take ancestor text for the name', () => {
+    expect(name(iconButton({}, 'Text of the parent card'))).toBe('Click on "#_R_2pt4b36_"');
+  });
+});
+
+describe('where a step ran', () => {
+  const inFrame = action('f', 'app.test', {
+    page: { url: '/tryit', title: '', domain: 'app.test', pathname: '/tryit', query: '?filename=demo&code=s3cret', frameUrl: 'https://app.test/tryit', frameId: 'iframeResult', frameName: 'result' },
+    tab: 2,
+  });
+  const recording = () => buildExportRecording({
+    ...state([page('p', '/tryit', [inFrame], 0)]),
+    testMetadata: { name: 'T', startUrl: '/tryit?filename=demo&access_token=abc' },
+  });
+
+  it('exports the page domain, query (secrets masked), iframe and tab', () => {
+    const r = recording();
+    expect(r.startUrl).toBe('/tryit?filename=demo&access_token=••••••••');
+    expect(r.pages[0].pageDomain).toBe('app.test');
+    expect(r.pages[0].steps[0]).toMatchObject({
+      pageQuery: '?filename=demo&code=••••••••', frameId: 'iframeResult', frameName: 'result', tab: 2,
+    });
+    expect(exportToJson(r)).not.toMatch(/s3cret|abc/);
+  });
+
+  it('keeps them through export → load → export', () => {
+    const imported = normalizeImportedRecording(JSON.parse(exportToJson(recording())));
+    const again = buildExportRecording(state(imported.pages, imported.manualSteps));
+    expect(again.pages[0].pageDomain).toBe('app.test');
+    expect(again.pages[0].steps[0]).toMatchObject({ frameId: 'iframeResult', frameName: 'result', tab: 2, pageQuery: '?filename=demo&code=••••••••' });
+  });
+});

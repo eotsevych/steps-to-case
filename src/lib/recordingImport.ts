@@ -170,6 +170,11 @@ function normalizePageContext(value: unknown, fallback?: Partial<PageContext>): 
     domain: stringValue(source.domain, fallback?.domain ?? parts.domain),
     pathname: stringValue(source.pathname, fallback?.pathname ?? parts.pathname),
     pageTag: stringValue(source.pageTag, fallback?.pageTag ?? '') || undefined,
+    // Where the step ran; restoring stored state must not drop these
+    frameUrl: stringValue(source.frameUrl) || undefined,
+    frameId: stringValue(source.frameId) || undefined,
+    frameName: stringValue(source.frameName) || undefined,
+    query: stringValue(source.query) || undefined,
   };
 }
 
@@ -298,6 +303,7 @@ function normalizeAction(value: unknown, index: number, fallbackPage: PageContex
   const containerContext = normalizeContainerContext(source.containerContext);
   if (containerContext) action.containerContext = containerContext;
   if (typeof source.componentTag === 'string') action.componentTag = source.componentTag;
+  if (typeof source.tab === 'number') action.tab = source.tab;
 
   return action;
 }
@@ -439,7 +445,14 @@ function exportStepToAction(value: unknown, index: number, page: PageContext): A
   const containerContext = containerFromExportStep(value);
   if (containerContext) action.containerContext = containerContext;
   if (typeof value.componentTag === 'string') action.componentTag = value.componentTag;
-  if (typeof value.frameUrl === 'string') action.page = { ...action.page, frameUrl: value.frameUrl };
+  action.page = {
+    ...action.page,
+    frameUrl: stringValue(value.frameUrl) || undefined,
+    frameId: stringValue(value.frameId) || undefined,
+    frameName: stringValue(value.frameName) || undefined,
+    query: stringValue(value.pageQuery) || undefined,
+  };
+  if (typeof value.tab === 'number') action.tab = value.tab;
 
   return action;
 }
@@ -476,6 +489,7 @@ function normalizePage(value: unknown, index: number, manualSteps: ManualStep[])
   const pageContext = normalizePageContext(source.pageContext, {
     url: stringValue(source.pageUrl),
     title: stringValue(source.pageTitle),
+    domain: stringValue(source.pageDomain) || undefined,
     pageTag: stringValue(source.pageTag) || undefined,
   });
   const id = stringValue(source.id, generateId());
