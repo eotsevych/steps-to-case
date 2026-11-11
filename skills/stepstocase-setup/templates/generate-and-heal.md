@@ -16,7 +16,8 @@ The recording was made during a run that passed. So a failure on the same build 
 Allowed fixes:
 - Locators: rebuild from `elementAttributes`, accessible name, label and `containerHtml`.
 - Waits: prefer the `triggeredRequests` response, or the next UI state.
-- Frames: go through the frame from `frameUrl`.
+- Frames: go through the frame from `frameUrl`. If `frameUrl` is missing or equals the page URL, inspect the live page, find the iframe that holds the element, and locate it by `id`, `name` or `title`.
+- Tabs: switch to the tab the step really runs in. Close a menu or popup left open by an earlier step (Escape) when it covers the next element.
 - Steps the recorder does not capture: hover, scroll into view, close a cookie banner or overlay, wait for an animation to end.
 - Test data that must be unique.
 - A step filed under the wrong page (navigation recorded one step late): move the call to the page object where the element really is.

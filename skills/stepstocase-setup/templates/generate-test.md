@@ -25,7 +25,8 @@ Field reference: [references/recording-json.md](references/recording-json.md). P
    - Component: `{{GOLD_COMPONENT_PATH}}`
 3. Before writing a class or method, search for an existing one that already does it (`{{SEARCH_HINT}}`). Reuse it. Never duplicate.
 4. Clean the recording with "Quirks in real recordings" in the reference, and write down the result before you code:
-   - page types: each recorded page -> its URL template -> page object;
+   - page types: each recorded page -> its site -> its URL template -> page object;
+   - tabs: which tab each step runs in (links with `target="_blank"` open new ones);
    - per step: the verb, the locator source (stable attributes only), the business request to wait for (noise removed), and the page it really belongs to (navigation can be filed one step late);
    - elements that repeat (the same element on several pages or in another language) -> one locator;
    - suspicious steps, with the reason.
@@ -61,6 +62,10 @@ Get the verb of a `RECORDED` step from `actionName` (`Click on`, `Fill ... with`
 | `SUBGROUP` | {{SUBGROUP_POLICY}} A group that ends on another page lives on the page where it starts. |
 | Suspicious step | {{SUSPICIOUS_POLICY}} |
 
+- Check / Uncheck: set the state with {{CHECK_API}}. Never use a click that toggles.
+- Steps on a group of similar elements (one radio group, one set of checkboxes): {{GROUP_METHOD_RULE}}
+- A link that opens a new tab: {{TAB_RULE}}
+
 ## 3. Locators
 
 Build each locator from the element fields. There are no selectors in the JSON. Pick the first option that is unique on the page:
@@ -72,7 +77,7 @@ Build each locator from the element fields. There are no selectors in the JSON. 
 - {{LOCALE_RULE}}
 - `containerLabel` / `containerHtml` present: {{CONTAINER_RULE}}
   Read `containerHtml` to find a stable attribute of the container and of the element inside it.
-- `frameUrl` present: {{FRAME_RULE}}
+- `frameUrl` present: {{FRAME_RULE}} If `frameUrl` equals the page URL, or is missing for an element that is in an iframe, see "Frames" in the reference.
 - {{LOCATOR_STORAGE_RULE}}
 
 Example in this project's syntax:
@@ -119,6 +124,8 @@ Example in this project's syntax:
 - {{TEST_STRUCTURE}}
 - Tags / IDs: {{TAGS_RULE}}
 - Sort **all** top-level steps by `stepOrder` across pages, then write one call per step. No raw locators in the test.
+- Test name: from `testName`. If it is `Untitled Test`, name it from what the flow does.
+- No assertion steps in the recording: {{NO_ASSERTION_POLICY}}
 
 Skeleton:
 

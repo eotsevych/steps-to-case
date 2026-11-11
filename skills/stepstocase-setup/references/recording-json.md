@@ -110,6 +110,24 @@ A recording captures what the browser saw, including noise. Apply these rules be
 - **Navigation can be filed one step late.** The navigation caused by step N can show up as `triggeredNavigationUrl` / `actionValue` of step N+1, and the step right after a navigation can be listed under the previous page. The order of pages is the truth: when the next step's page has a different `pageUrl`, the step before it caused that navigation. If an element clearly belongs to the next page (for example, a "Copy install prompt" button listed under the search page), put it there.
 - **Steps of one page can be split by another page.** A page visited twice is listed once, so its `stepOrder` values can have gaps (13, 15, 16 on one page, 14 on another). Page objects are grouped by page. The test is ordered by `stepOrder`.
 - **A `SUBGROUP` can cross pages** (it expands a section, then clicks "Home"). Put its method on the page where it starts. If methods return the next page object, it returns the page where it ends.
+- **The query string is dropped** from `startUrl` and `pageUrl`. Two different pages with the same path (`/tags/tryit.asp?filename=tryhtml_select` and `...?filename=tryhtml_iframe`) are merged into one recorded page. Get the full URL from the `href` of the link that opened the page. If the start page needs a query string, the JSON cannot open it: report it, and use the project's URL or ask.
+- **"Navigation" to the current page URL** (`triggeredNavigationUrl` equal to the step's own `pageUrl`) is no navigation.
+- **Navigation that no step caused.** The user typed in the address bar, used Back, or opened a bookmark. Signs: the next page is not where the clicked element leads (its `href` points elsewhere, it is a tab or a wrapper, or the next page is on another site). The step before it still gets the URL as `triggeredNavigationUrl`. Write an explicit navigation to that page (full URL if known) and mark it as a suspicious step.
+
+### Several sites and tabs
+
+- **`pageUrl` has no domain.** When a recording leaves `baseUrl`'s site (GitHub -> Google -> W3Schools), find each page's site from the absolute `href` of the link that led there, from `frameUrl`, or from `pageTitle` ("... - Google Search"). Steps on sites that are not the app under test (search engines, docs sites, third-party pages) are suspicious steps. A test should not drive them.
+- **New tabs.** A click on a link with `target="_blank"` (or `window.open`) opens a new tab. The JSON has no tab ID, so follow the tabs yourself:
+  - the steps on the page that the link's `href` leads to happen in the new tab;
+  - a later step on a page of an earlier tab means the user switched back to that tab;
+  - one recorded page can stand for two tabs (the same path opened twice). Use `stepOrder` and the link that opened each tab to tell them apart.
+
+  Keep one page handle per tab in the code, and switch the way the framework profile says.
+
+### Frames
+
+- `frameUrl` set: the element is inside an iframe. If `frameUrl` equals the page URL or is `about:blank`, the iframe has no URL of its own (it was built with `srcdoc` or `document.write`). The JSON then cannot identify it. Find the iframe by its `id`, `name` or `title` in an existing page object, or in the live page. If neither is possible, write a TODO and let the heal loop find it.
+- `frameUrl` can be **missing** for an element that is inside an iframe (in the same recording, other steps in that iframe have it). If an element cannot be found on the page, look in its iframes.
 
 ### Elements and locators
 
@@ -118,18 +136,30 @@ A recording captures what the browser saw, including noise. Apply these rules be
   - attributes that point to generated IDs: `aria-controls`, `aria-labelledby`, `aria-activedescendant`, `aria-describedby`, `for`;
   - state attributes, which change while the page is used: `aria-expanded`, `aria-hidden`, `aria-selected`, `aria-checked`, `aria-pressed`, `data-state`, `open`, `tabindex`, and a `data-*` whose value is a state (`data-repository-readme="ready"`); test for the presence of such an attribute, never its value;
   - `value` on inputs: it is a snapshot from the moment of capture and can be partial (`"De"` while typing `"Design"`). The real input is `actionValue`;
-  - `class` made of utility classes (Tailwind: `inline-flex min-h-11 ...`) or hashed classes. Use a class only when it is semantic and stable (`home-collection-card`).
+  - `class` made of utility classes (Tailwind: `inline-flex min-h-11 ...`) or hashed classes (`prc-Button-ButtonBase-9n-Xk`, `styles-module_gNfHta_...`). Use a class only when it is semantic and stable (`home-collection-card`, `tnb-menu-btn`);
+  - positional attributes: `aria-posinset`, `aria-setsize`;
+  - `style`, and junk such as `sx="[object Object]"`;
+  - tracking attributes: `jsname`, `data-ved`, `ping`, `data-cturl`, `data-ctorig`, and `href`s that are redirect or tracking URLs;
+  - styling props that many elements share: `data-size`, `data-variant`, `data-loading`, `data-component`. They can help only together with a unique attribute.
 - **Good attributes:** test IDs, `href`, `name`, `type`, `role`, `title`, `aria-label`, readable `id`s (`repository-install-prompt`), and stable `data-*` that are not states (`data-theme-toggle`, `data-slot="breadcrumb-link"`, `data-sponsor-example`).
-- **Text:** use `elementInnerText` (visible text). `elementText` is raw `textContent`: it joins hidden text without spaces (`Expand full READMECollapse README`) and can even contain HTML from `<noscript>`.
+- **A test ID is not always unique.** Generic test IDs (`anchor-button`, `button`, `icon`) appear many times on a page. Combine one with a readable `id`, `aria-label` or the container, or skip it.
+- **Text:** use `elementInnerText` (visible text). `elementText` is raw `textContent`: it joins hidden text without spaces (`Expand full READMECollapse README`) and can even contain HTML from `<noscript>`. Text in `elementInnerText` that looks like HTML (`<select>`) is real text; escape it in locators.
+- **Form fields have no visible text.** For `input`, `select` and `textarea`, `elementText` / `elementInnerText` are fallbacks: the `name` (`vehicle1`, `fav language`), the placeholder or the value. Never locate a field by them. Use the label, the accessible name, `id` or `name`.
+- **Numbers in text change.** Counters and badges become part of the text (`Fork22`, `Pull requests1`). Locate by test ID, `aria-label` or the text without the number.
+- **Overlay items** (`menuitem`, `menuitemradio`, `option`) belong to a menu or list that an earlier step opened, usually rendered at the end of the page. Locate them by role and name at page level, not inside the button that opened them.
 - **Accessible name vs label:** `elementAccessibleName` follows `aria-labelledby` first, so it can differ from `elementAriaLabel` and from the quoted text in `actionName`. For role locators, use `elementAccessibleName`. If that does not match, try `elementAriaLabel`.
 - **The element can be its own container.** When `containerTag` / `containerLabel` describe the element itself (same tag and the same label, or `containerHtml` starts with the element's own tag and `href`), do not scope it twice.
-- **Wrapper clicks.** A click on a non-interactive tag (`div`, `span`, `p`, `li`, `section`) means the user hit padding or a wrapper. If the step caused something (navigation, a business request, the next step depends on it), the real target is the interactive child whose text is `elementInnerText`: a link or button inside it. If nothing followed (no navigation, no business request, the flow continues as before), treat it as a **suspicious step** (see below).
+- **Wrapper clicks.** A click on a non-interactive tag (`div`, `span`, `p`, `li`, `ul`, `section`) that has no interactive `role` (`button`, `link`, `menuitem`, `tab`, ...) and no `tabindex` means the user hit padding or a wrapper. Its `elementAccessibleName` can be the text of all its children joined with line breaks; use the first line of `elementInnerText`. If the step caused something (navigation, a business request, the next step depends on it), the real target is the interactive child whose text is `elementInnerText`: a link or button inside it. If nothing followed (no navigation, no business request, the flow continues as before), treat it as a **suspicious step** (see below).
 - **Localized UI.** After a language switch (a `select` with a locale value, or a URL that gains `/es/`), the same element has a translated name (`Switch to Light / Dark` -> `Cambiar a Claro / Oscuro`). Recognize it by its stable attributes (`data-theme-toggle`) and reuse one locator. Do not make a second method for the translated text.
 
 ### Actions
 
 - **`Select` on an element that is not a `<select>`** is a pick from a custom combobox or autocomplete (`role="combobox"`, `aria-autocomplete`). Do it as: fill or open the combobox, then click the option, for example `getByRole('option', { name })`. `actionValue` is the option's whole text and can have line breaks (`"rea\n\nmorluto/rea"`). Use its first non-empty line as the option name, or the full text with whitespace normalized.
 - **`Select` on a real `<select>`:** `actionValue` is the option `value` (`es`) and `actionName` has the visible label (`Español`). Prefer the value: it does not change with the UI language.
+- **Check and Uncheck set a state; they do not toggle.** Use the framework's set-state call (`check()` / `uncheck()`, or click only when the state differs). A radio button can only be checked. Repeated check and uncheck steps on one element are real steps: replay them all. A double-click on a `label` toggles its checkbox twice; replay it as a double-click.
+- **Steps on a group of similar elements** (checkboxes or radios with one `name`, links of one menu) can become one method with a parameter. Follow the framework profile.
+- **A popup or menu that is opened and never used** (the next step is somewhere else) can cover the page. The heal loop may need to close it (Escape) before the next step.
+- **A name that is a selector.** `actionName` like `Click on "#global-copilot-agent-button"` or `Click on "#_R_2pt4b36_"` means the element has no text. Name the method from `elementAccessibleName` ("Open Copilot menu"). Use the `id` in a locator only when it is readable.
 - **A renamed step can have a meaningless name.** `actionName` like `Click on custom Text`, `Assert: ASsert` or `Manual step` names nothing. When the quoted text matches no element field, or the description is a single word or clearly a placeholder, name the method from the element (`elementAccessibleName`, `elementInnerText`) and the assertion type instead: `assertReadmeVisible()`.
 - **Clipboard, scroll, theme and other UI-only actions** are valid steps. Replay them as clicks. Do not add clipboard checks the recording does not have.
 
@@ -147,10 +177,15 @@ A recording captures what the browser saw, including noise. Apply these rules be
 
 - `preconditions` like "Open any page" or "Go to the site" are already done by opening `startUrl`. Do not write a helper for them.
 - Recorded `baseUrl` is the environment the user recorded on. It can be production. The test uses the project's configured base URL.
+- `testName` `Untitled Test` is the default: the user did not name the test. Name the test from what the flow does, and say so in the report.
+
+### No expected results
+
+A recording can have no assertion steps at all. Never invent checks about content the recording did not verify. Do what the framework profile says: report it with a TODO, or add only the checks that the recorded actions themselves prove (the URL reached after a navigation, the final checked state, the selected option, a filled value).
 
 ### Suspicious steps
 
-A step is suspicious when it most likely did nothing or cannot be replayed as recorded: a wrapper click with no effect, a click on an element from a page the user did not reach, a meaningless manual step. Never delete it silently. Do what the framework profile says (keep with a warning comment, or skip with a TODO), and list every suspicious step in the final report with its `stepOrder` and the reason.
+A step is suspicious when it most likely did nothing or cannot be replayed as recorded: a wrapper click with no effect, a click on an element from a page the user did not reach, a meaningless manual step, a navigation that no step caused, a step on a site that is not the app under test. Never delete it silently. Do what the framework profile says (keep with a warning comment, or skip with a TODO), and list every suspicious step in the final report with its `stepOrder` and the reason.
 
 ## Single-page export
 

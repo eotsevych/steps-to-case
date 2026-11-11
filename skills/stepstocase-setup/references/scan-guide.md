@@ -75,7 +75,9 @@ Find:
 5. iframes: `frameLocator`, `contentFrame`, `switchTo().frame`, `cy.iframe`, a helper.
 6. Interaction wrappers: custom `click`/`fill`/`type` helpers or element wrapper classes that must be used instead of the raw API.
 7. Waits: `waitForResponse`, `route`, `cy.intercept` + `cy.wait('@alias')`, `WebDriverWait`/`ExpectedConditions`, custom wait helpers, fixed sleeps (count them; note if they are banned).
-8. Assertion library and style: `expect(locator).toBeVisible()`, `assertThat`, AssertJ, Hamcrest, `should`, soft assertions. Where assertions live: in page objects (`assertX`/`verifyX` methods) or in tests.
+8. New tabs and windows: `waitForEvent('popup')`, `context.waitForEvent('page')`, `getWindowHandles` + `switchTo().window`, `switchToWindow`, Cypress `invoke('removeAttr', 'target')`, a helper.
+9. Checkboxes, radios and dropdowns: `check()`/`setChecked`, `selectOption`, custom checkbox or select components and their helpers.
+10. Assertion library and style: `expect(locator).toBeVisible()`, `assertThat`, AssertJ, Hamcrest, `should`, soft assertions. Where assertions live: in page objects (`assertX`/`verifyX` methods) or in tests.
 
 ### Subagent C: test anatomy, data, preconditions, running
 
@@ -123,7 +125,7 @@ Then compare it with the sample recording (if you have one):
 - Which `componentTag` values appear? Is there a component class for each?
 - Which `preconditions` appear? Is there a helper for each?
 - Are there containers, frames, masked passwords, triggered requests, `MANUAL` steps, `SUBGROUP`s? Ask only about those that appear, or that the team will clearly meet.
-- Apply "Quirks in real recordings" from recording-json.md and note what this sample has: page types by URL template (and whether a page object with that route exists: search route constants, `goto`/`open` paths and `url` fields), noise requests, custom-combobox selects, a language switch, wrapper clicks, meaningless names, steps filed under the wrong page. Each one drives a question (B5, B6, C4 to C6, D5) or a rule.
+- Apply "Quirks in real recordings" from recording-json.md and note what this sample has: page types by URL template (and whether a page object with that route exists: search route constants, `goto`/`open` paths and `url` fields), noise requests, custom-combobox selects, a language switch, wrapper clicks, meaningless names, steps filed under the wrong page. Also note: the sites visited, new tabs, iframes without their own URL (or missing `frameUrl`), dropped query strings, navigations no step caused, check/uncheck and radio groups, and whether there are no assertions or the test is `Untitled Test`. Each one drives a question (A5, B5, B6, C4 to C7, D5, D6) or a rule.
 
 ## 4. Framework defaults (use when the profile says unknown and the user picks the default)
 
@@ -134,3 +136,11 @@ Then compare it with the sample recording (if you have one):
 | Selenium / WebDriver (Java, C#, Python, JS) | `By.cssSelector` with test id -> `By.id` -> `By.name` -> CSS from stable `data-*` -> XPath on text as a last resort | find the container element, then `findElement` inside it | explicit wait for the resulting UI state (no network access by default) | the project's assertion lib (AssertJ, NUnit, pytest `assert`) |
 | WebdriverIO | `$('[data-testid=...]')` -> `$('aria/Name')` -> CSS | `$(container).$(...)` | `waitUntil` on UI state, or mocks if used | `expect-webdriverio` |
 | Selenide | `$(byTestId)`/`$("[data-testid=...]")` -> `$(byText)` | `$(container).$(...)` | condition waits (`shouldBe(visible)`) | `should*` conditions |
+
+| Framework | New tab | Check / uncheck | iframe |
+|---|---|---|---|
+| Playwright | `const popup = page.waitForEvent('popup')` before the click, then `await popup` | `check()` / `uncheck()` / `setChecked()` | `frameLocator(...)` / `locator(...).contentFrame()` |
+| Cypress | no multi-tab: remove `target` (`invoke('removeAttr', 'target')`) or `cy.visit(href)` | `check()` / `uncheck()` | `its('0.contentDocument.body')` or the `cypress-iframe` plugin |
+| Selenium / WebDriver | `getWindowHandles()` + `switchTo().window(...)`, and switch back | click only when `isSelected()` differs | `switchTo().frame(...)` and `switchTo().defaultContent()` |
+| WebdriverIO | `switchWindow(urlOrTitle)` | click only when `isSelected()` differs | `switchFrame(...)` (v9) or `switchToFrame` |
+| Selenide | `switchTo().window(index)` | `setSelected(true/false)` | `switchTo().frame(...)` |

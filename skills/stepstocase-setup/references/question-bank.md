@@ -40,6 +40,10 @@ Options: the agents found in the quick scan (agent folders and instruction files
 - *Yes, generate, run and heal* (Recommended when tests can run locally against a test environment)
 - *Generate and compile only*: no test runs, for example when tests need VPN or CI-only secrets.
 
+**A5. App under test** (only when the sample visits more than one site)
+"The recording visits <sites with their pages, e.g. github.com (pages 1-2), google.com (page 3), w3schools.com (pages 4-8)>. Which of them is the app you test?" (multi-select)
+Options: each site, the `baseUrl` site first. Steps on sites that are not picked become suspicious steps (see D5).
+
 ## Round B: structure and style (ask only the mixed and unknown items)
 
 **B1. Gold-standard example** (always ask; it is the strongest single signal)
@@ -117,6 +121,12 @@ In the question text, list the requests you will ignore as noise (`/cdn-cgi/*`, 
 - *Yes: never locate by visible text; use attributes or your translation helper* `<detected helper>`
 - *No: text locators are fine; the language switch is just a step* (Recommended when no i18n helpers exist)
 
+**C7. Groups of similar elements** (only when the sample acts on several elements of one group: checkboxes or radios with one `name`, links of one menu, and the code is `mixed` or `unknown`)
+"The recording checks `<I have a bike>`, `<I have a car>` and `<I have a boat>`, all in the group `<vehicle>`. How should the page object expose them?"
+- *One method with a parameter*, for example `checkVehicle('Bike')` (Recommended when the project already does this)
+- *One method per element*, for example `checkBike()`, `checkCar()`
+Preview: both versions, in the project's syntax.
+
 ## Round D: data and preconditions (built from the sample recording)
 
 **D1. Preconditions** (one question per precondition in the sample, at most 3 in a round; group similar ones)
@@ -146,6 +156,12 @@ Options: the secret sources found (env var name, config key, test-user fixture),
 - *Keep the step with a warning comment, and list it in the report* (Recommended)
 - *Skip it with a TODO comment, and list it in the report*
 - *Stop and ask me each time*
+
+**D6. No expected results** (only when the sample has no assertion steps)
+"This recording has no expected results: it only does things. What should the generated test check?"
+- *Only what the actions prove*: the final URL, checked state, selected option, filled value (Recommended)
+- *Nothing: add a TODO for the expected result and list it in the report*
+- *Stop and ask me for the expected result*
 
 ## Conditional questions (add to any round with space; only when detected)
 
