@@ -22,6 +22,8 @@ Read only manifest and config files, and the directory tree. Do not open test fi
 | `*.csproj`, `Directory.Packages.props` | `Microsoft.Playwright*`, `Selenium.WebDriver`, `NUnit`, `xunit`, `MSTest`, `Reqnroll`/`SpecFlow`, `Allure.*` |
 | `Gemfile`, `go.mod`, `*.robot` | `capybara`, `watir`, `rspec`, `cucumber`; `playwright-go`, `chromedp`; Robot Framework |
 
+Record the **version** of each core library (UI driver, runner, assertion, BDD and reporting libraries) from the lock file or build file (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `pom.xml`, `build.gradle`, `poetry.lock`, `requirements*.txt`, `*.csproj`). The documentation check uses them (see docs-lookup.md).
+
 ### 1.2 Config and layout
 
 - Runner config: `playwright.config.*`, `cypress.config.*`, `wdio.conf.*`, `testng*.xml`, `junit-platform.properties`, `conftest.py`, `pytest.ini`, `.runsettings`, `cucumber.*`, `behave.ini`.
@@ -31,11 +33,11 @@ Read only manifest and config files, and the directory tree. Do not open test fi
 
 ### 1.3 AI agents the team uses
 
-List the agent folders and instruction files at the repo root: `.agents/`, `.claude/`, `CLAUDE.md`, `.cursor/`, `.cursorrules`, `.github/copilot-instructions.md`, `.github/prompts/`, `AGENTS.md`, `.windsurf/`, `.roo/`, `.kiro/`, `.junie/`, `.goose/`, `.continue/`, `GEMINI.md`. These become the recommended options for question A3. Also note the agent you are running in.
+List the agent folders and instruction files at the repo root: `.agents/`, `.claude/`, `CLAUDE.md`, `.cursor/`, `.cursorrules`, `.github/copilot-instructions.md`, `.github/prompts/`, `AGENTS.md`, `.windsurf/`, `.roo/`, `.kiro/`, `.junie/`, `.goose/`, `.continue/`, `GEMINI.md`. These become the recommended options for question I1. Also note the agent you are running in.
 
 ### 1.4 Several candidates
 
-If you find more than one test project (a monorepo with UI and API tests, a legacy Selenium suite next to a new Playwright suite), list each with its runner and file count. The user picks one in the interview (question A1). Scan only the chosen project in the deep scan.
+If you find more than one test project (a monorepo with UI and API tests, a legacy Selenium suite next to a new Playwright suite), list each with its runner and file count. The user picks one in the interview (question T1). Scan only the chosen project in the deep scan.
 
 ### 1.5 No UI test framework found
 
@@ -46,7 +48,7 @@ Tell the user. Offer two paths: stop, or define a new framework from scratch wit
 **Size check.** Count the files in the chosen project's test, page object, component, fixture and helper folders.
 
 - **30 files or fewer:** do the deep scan yourself. Use the three briefs below as a checklist.
-- **More than 30 files:** if your agent can start subagents, start the three below **in parallel** (read-only search agents, for example `Explore` in Claude Code). Give each one the project root, the quick-scan results, and its brief. Continue with nothing else until all three report. If your agent has no subagents, work through the briefs yourself, one after another, and keep only the report from each.
+- **More than 30 files:** if your agent can start subagents, start the three below **in parallel** (read-only search agents, for example `Explore` in Claude Code). Give each one the project root, the quick-scan results, the team's description from step 0 (as hints to check, not facts), and its brief. Continue with nothing else until all three report. If your agent has no subagents, work through the briefs yourself, one after another, and keep only the report from each.
 - **BDD project** (feature files found): also start subagent D.
 
 Every brief ends with the same report contract:
@@ -64,6 +66,13 @@ Find:
 6. Method style: does an action return `this` / the next page (fluent), or `void`/`Promise<void>`? Are there reporting annotations (`@Step`, `allure.step`, `test.step`)?
 7. Folder and file naming for pages, components, tests; class and method naming (casing, prefixes like `click`/`fill`/`assert`/`verify`/`should`).
 8. Registration: files that must change when a page is added (App class, fixture file, index/barrel `export`).
+9. Flows: any layer between tests and page objects (`flows/`, `steps/`, `actions/`, `tasks/`, helpers that call several pages). How tests use it, with one example.
+10. Entry points and areas: every object tests use to reach pages (`app`, `adminApp`, fixtures per area) and the page folders per area; how a page's folder relates to its URL, domain or design version.
+11. Page naming: for 5 page objects, the class name next to the URL it opens (from `open`/`goto` calls or route constants), to see whether names follow the URL, the page title or a business name.
+12. Locator storage, with counts: fields, getters, `@FindBy`, locator maps, local variables, inline calls.
+13. Method name casing (`camelCase`, `snake_case`, `PascalCase`) and test method naming.
+14. Values: do methods take typed values and expected texts as parameters, hold them inside, or read test data constants?
+15. Report steps: the annotation or wrapper (`@Step`, `test.step`, `allure.step`, Serenity) and 5 real examples of its text, with how parameters appear in it.
 
 ### Subagent B: locators, interactions, waits, assertions
 
@@ -82,13 +91,14 @@ Find:
 ### Subagent C: test anatomy, data, preconditions, running
 
 Find:
-1. Test file skeleton: imports, `describe`/class, hooks (`beforeEach`, `@BeforeMethod`, fixtures), one test vs many per file.
+1. Test body structure, and how a test reaches its first page (an `open` helper, direct navigation, through the UI): imports, `describe`/class, hooks (`beforeEach`, `@BeforeMethod`, fixtures), how page objects are obtained, one test vs many per file, step blocks (`test.step`, `@Step`), where assertions sit, comments or Arrange/Act/Assert layout.
 2. Tags and metadata: `@tag`, `{ tag: ... }`, `@Tag`, `groups`, `@pytest.mark`, test-management IDs (TestRail, Xray, Jira, Allure `@TmsLink`), owner/severity annotations.
 3. Preconditions: login helpers (UI login, API login, `storageState`, cookies), user/role selection, data seeding over API or DB, cleanup. List each helper with its signature and path.
 4. Test data: hard-coded literals, data files (JSON/YAML/CSV), builders/factories, faker, unique suffixes (timestamps, UUIDs).
 5. Secrets and environments: how passwords and users are read (env vars, `.env`, config files, vault helpers), how `baseUrl` per environment is chosen.
-6. How to run **one** test file or one test from the command line, and how to type-check/compile without running (`npx tsc --noEmit`, `mvn -q test-compile`, `dotnet build`, `python -m py_compile`). Read `package.json` scripts, CI files (`.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`) and README.
-7. The 3 best-written recent tests (use `git log` dates if available): follow the conventions, use page objects, no sleeps. Give a reason for each.
+6. How to type-check or compile the tests without running them (`npx tsc --noEmit`, `mvn -q test-compile`, `dotnet build`, `python -m py_compile`). Read `package.json` scripts, CI files (`.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`) and README.
+7. Test files: one test per file or several, how files relate to features or areas, and the file, class and method naming patterns.
+8. The 3 best-written recent tests (use `git log` dates if available): follow the conventions, use page objects, no sleeps. Give a reason for each.
 
 ### Subagent D (BDD only): step catalog
 
@@ -104,6 +114,7 @@ Write the profile with these sections. Each line is a fact with its evidence and
 
 ```markdown
 # Framework Profile
+## In the team's words   the step-0 description, word for word (or "explore": none given)
 ## Stack           language, runner, driver, assertion lib, BDD, reporter
 ## Layout          folders and file naming for tests, pages, components, fixtures, data
 ## Architecture    pattern, base classes, how pages are made and reached, registration files
@@ -113,19 +124,13 @@ Write the profile with these sections. Each line is a fact with its evidence and
 ## Tests           skeleton, hooks, tags, test-management IDs
 ## Preconditions   helper -> signature -> path
 ## Data & secrets  data style, password source, env/baseUrl handling
-## Commands        compile/type-check command, run-one-test command
+## Commands        compile/type-check command
 ## Exemplars       gold-standard test, page object, component (paths)
+## Documentation   per core library: version, Context7 library ID or docs URL, verified / not verified
 ## Open questions  every mixed/unknown item, as a question for the interview
 ```
 
-Then compare it with the sample recording (if you have one):
-
-- Which attributes do the recorded elements really have? If the app uses `data-qa` but the tests use `data-testid`, that is a question.
-- Which `pageName` / `pageTag` values appear? Is there a page object for each already?
-- Which `componentTag` values appear? Is there a component class for each?
-- Which `preconditions` appear? Is there a helper for each?
-- Are there containers, frames, masked passwords, triggered requests, `MANUAL` steps, `SUBGROUP`s? Ask only about those that appear, or that the team will clearly meet.
-- Apply "Quirks in real recordings" from recording-json.md and note what this sample has: page types by URL template (and whether a page object with that route exists: search route constants, `goto`/`open` paths and `url` fields), noise requests, custom-combobox selects, a language switch, wrapper clicks, meaningless names, steps filed under the wrong page. Also note: the sites visited, new tabs, iframes without their own URL (or missing `frameUrl`), dropped query strings, navigations no step caused, check/uncheck and radio groups, and whether there are no assertions or the test is `Untitled Test`. Each one drives a question (A5, B5, B6, C4 to C7, D5, D6) or a rule.
+Every quirk in "Quirks in real recordings" (recording-json.md) needs a rule in the generator: page types by URL template, other sites, new tabs, frames, containers, custom dropdowns, check/uncheck, noise requests. For each one, the rule comes from the profile when the project already handles that case, from the user's answer, or from the framework defaults in section 4. Mark which, so the hand-off can list the rules that came from defaults.
 
 ## 4. Framework defaults (use when the profile says unknown and the user picks the default)
 

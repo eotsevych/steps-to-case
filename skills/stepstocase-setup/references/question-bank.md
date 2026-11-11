@@ -1,176 +1,160 @@
 # Interview: question bank
 
-Ask with your agent's structured question tool if it has one (for example `AskUserQuestion` in Claude Code). If not, ask in chat as numbered questions with lettered options, and wait for the answers. One round is at most 4 questions. Plan for at most 4 rounds. A usual interview is 2 to 3 rounds, about 8 to 10 questions.
+The interview is about **how this framework is built**: its structure, page objects, test bodies, patterns and flows. The goal: the user recognises their own code in what `/generate-autotest` will write.
 
-If more questions qualify than fit in 4 rounds, keep this order: A, then B1, then the questions whose answer the scan cannot guess. Drop the questions whose Recommended option is backed by strong evidence. Use that option as the rule and show it in the summary at the end.
+Ask with your agent's structured question tool if it has one (for example `AskUserQuestion` in Claude Code). If not, ask in chat as numbered questions with lettered options, and wait for the answers. One round is at most 4 questions. Plan for 3 to 4 rounds. Round 1 is always asked; every other question has a condition, so a consistent repo gets few of them.
 
 In this file, "preview" means a short code block shown with an option, and "multi-select" means the user may pick several options. "Other" is always allowed: the user can answer in their own words.
 
 ## Rules for every question
 
-1. **Do not ask what the scan already answered.** A `confirmed` fact is not a question. Show it in the summary at the end of the interview, where the user can correct it.
-2. **Ask only if the answer changes the generator.** If every answer gives the same rule, do not ask.
-3. **Ask about policy, not about facts.** Good: "Where should assertions live?" Bad: "Do you use Playwright?"
-4. **The detected option comes first** and is labelled `(Recommended)`. Put the evidence in its description: `"Used in 41 of 44 page objects"`.
-5. **Show the user's own code.** For style questions (`preview` field), build each option's preview from the project's code: a real excerpt for the detected variant, and the same step rewritten in the other style. Never show generic code when real code exists.
-6. **Use the sample recording.** Build options from real values in the JSON: its `pageName`s, `pageTag`s, `componentTag`s, `preconditions`, element attributes. A question about "the `Delete` button in the `Order #1042` row" is easier to answer than a question about "containers".
-7. **Concrete options only.** The tool adds "Other" automatically. Never add a "Not sure" option; the Recommended option is the answer to "not sure".
-8. **Questions must stand alone.** The user may see only the question dialog. Name the file, element or value inside the question text.
-9. Record every answer in the profile as a rule, with "decided by the user" as its evidence.
+1. **Show, then ask.** Structure questions show a preview: the code `/generate-autotest` would write, built from the patterns the scan found, in the project's own syntax, class names and folders. The user confirms the shape or picks another variant found in the repo.
+2. **The scan decides what exists; the user decides only what is ambiguous.** Never ask whether the project uses page objects, fixtures or BDD: the scan knows. Follow the pattern the repo uses. Ask only where the repo has two patterns, where no example exists, or where the preview is the only way to confirm the scan read the code right.
+3. **The detected variant comes first** and is labelled `(Recommended)`, with its evidence in the description: `"Used in 41 of 44 page objects"`.
+4. **Never ask about running tests, environments or URLs.** The generator writes code and compiles it. Nothing else.
+5. **Ask about the framework, not about one recording.** Each answer becomes a rule for every recording.
+6. **Concrete options only.** The tool adds "Other" automatically. Never add a "Not sure" option.
+7. **Questions must stand alone.** Name the files, classes and helpers inside the question text.
+8. Record every answer in the profile as a rule, with "decided by the user" as its evidence.
+9. **Use the team's description** (step 0 of SKILL.md). Do not ask what it already says and the code confirms. Ask about every point where it and the code disagree, showing both.
 
-## Round A: scope (always, first)
+## Round 1: structure (always)
 
-**A1. Test project** (only when the quick scan found more than one)
-"This repo has N UI test projects. Which one should generated tests go to?"
-Options: each project with its runner and file count, the most active one (most recent commits) first.
-
-**A2. What to generate**
-"When you give the generator a recording, what should it write?"
-- *Page objects and a test* (Recommended when page objects exist): new or updated page/component classes, then one test that calls them.
-- *Test only, reusing existing page objects*: if a needed method does not exist, stop and list what is missing.
-- *Flat test with locators inline* (Recommended when no page objects exist).
-- *Feature file and step definitions* (only when BDD was detected): reuse catalog steps, add new ones only for steps with no match.
-
-**A3. Agents to install for** (multi-select)
-"Which AI coding agents does your team use in this repo? The generator is installed for each one."
-Options: the agents found in the quick scan (agent folders and instruction files) first, each marked `(Recommended)` with its evidence (".claude/ found"). Fill the remaining slots, up to 4, from: Claude Code, Cursor, GitHub Copilot, Codex. The user names any other agent under "Other".
-
-**A4. Run and heal** (skip when no run command was found)
-"Can the generator also run the new test and fix it until it passes? It would use `<detected run-one-test command>`."
-- *Yes, generate, run and heal* (Recommended when tests can run locally against a test environment)
-- *Generate and compile only*: no test runs, for example when tests need VPN or CI-only secrets.
-
-**A5. App under test** (only when the sample visits more than one site)
-"The recording visits <sites with their pages, e.g. github.com (pages 1-2), google.com (page 3), w3schools.com (pages 4-8)>. Which of them is the app you test?" (multi-select)
-Options: each site, the `baseUrl` site first. Steps on sites that are not picked become suspicious steps (see D5).
-
-## Round B: structure and style (ask only the mixed and unknown items)
-
-**B1. Gold-standard example** (always ask; it is the strongest single signal)
+**S1. Gold-standard test**
 "Which existing test should every generated test look like?"
-Options: the up to 3 best tests that subagent C found, each with its reason ("uses fixtures, no sleeps, edited last week"). Preview: the first 20 to 25 lines of each.
+Options: the up to 3 best tests that subagent C found, each with its reason ("uses fixtures and test.step, no sleeps, edited last week"). Preview: the first 20 to 25 lines of each.
 
-**B2. Page object style** (only when `mixed`)
-"Your page objects are written in two ways. Which one should new page objects use?"
-Options: each variant, with a preview excerpt and its count.
+**S2. Page object shape**
+"This is how /generate-autotest will write a new page object, following `<exemplar path>`. Is this the shape you want?"
+Preview: a short page object for an imaginary "Orders" page, in the project's exact style: imports, base class, constructor, how elements are declared (fields, getters, locator map, `@FindBy`), one action method, one assertion method if the project puts them there, and what methods return (`this`, the next page, nothing).
+- *Yes, like this* (Recommended)
+- *Like `<other variant path>`* (only when the repo has a second style; preview it the same way)
 
-**B3. Where assertions live** (only when `mixed` or `unknown`)
-"The recording says: `<a real ASSERTION_WITH_ELEMENT actionName from the sample>`. Where should that check go?"
-- *Assertion method in the page object*, for example `assertOrderCreatedVisible()`
-- *`expect` in the test*, with the locator exposed by the page object
-Preview: that real assertion written both ways.
+**S3. Test body shape**
+"This is how a generated test will look, following `<gold-standard path>`. Is this the shape you want?"
+Preview: a short test in the project's exact style: imports, how page objects are obtained (fixture, `new`, App registry, DI), setup and hooks, preconditions, test steps (plain calls, `test.step`, `@Step`), where assertions are, tags and annotations.
+- *Yes, like this* (Recommended)
+- *Like `<other variant path>`* (only when the repo has a second style)
 
-**B4. Grouped steps (SUBGROUP)** (only when the sample has a `SUBGROUP`, or the team uses them)
-"A recorded step `<real SUBGROUP name>` has <n> sub-steps. How should a group become code?"
-- *One page object method* named after the group (Recommended for POM)
-- *A step block in the test* (`test.step`, `allure.step`, `@Step`): sub-steps stay visible in the report
-- *A flow/helper method* shared across pages (only if a flows/actions layer exists)
+## Round 2: core conventions (ask each only when the repo has two styles or no example; otherwise it is a rule)
 
-**B5. Page types** (only when two or more recorded pages share a URL template or a `pageName`)
-"The recording visits N pages. By their URLs they look like M page types. Should the generator group them like this?"
-Preview: the proposed grouping, one line per page type, with the matching existing page object when there is one:
-```
-/creators/:owner/:repo          <- pages 2, 5, 7 ("skills", "skills", "skills" /es/)  -> CreatorRepoPage (exists)
-/creators/:owner/:repo/:skill   <- pages 1, 6                                        -> SkillPage (new)
-/                               <- page 4                                            -> HomePage (exists)
-```
-- *Group by URL template* (Recommended)
-- *One page object per recorded page*: only for apps whose URLs do not show the page type
+**N1. Page naming**
+"How should a recorded page get its page object name? For the pages `/orders/123` (title 'Order #123 | Shop'), `/` and `/settings/profile`:"
+- *From the page name in the recording*: `OrderPage`, `HomePage`, `ProfilePage`
+- *From the URL path, IDs removed*: `OrdersPage`, `HomePage`, `SettingsProfilePage`
+- *From the page title*: `OrderPage`, `ShopPage`, `ProfilePage`
+Build the examples with the repo's real suffix and casing. Mark as Recommended the option that matches how existing page objects relate to their URLs.
 
-**B6. Page tags** (only when the sample has `pageTag`)
-"Pages <list> are tagged `<pageTag>`. What does that tag mean in your test code?"
-- *A separate folder or namespace* (for example a redesign): `<detected folder>` (Recommended when such folders exist)
-- *A different base class or layout*
-- *Nothing: ignore it* (Recommended when no such split exists)
+**N2. Areas and entry points** (only when the repo has several entry objects, registries or app classes, such as `app`, `adminApp`, `mailApp`, or page folders per area)
+"Your tests reach pages through `<entry objects found>`, and pages live in `<area folders>`. How should a new page choose its folder and entry object?"
+- *By the `pageTag` of the recording*: the user gives the mapping `<tag> -> <folder> + <entry object>`
+- *By URL path*: the user gives the mapping `<path prefix> -> <folder> + <entry object>`
+- *By domain*, for apps on several hosts
+Preview: two pages placed by the chosen rule, and the test lines that reach them.
 
-## Round C: locators and waits
+**N3. Where locators live**
+"Where should a page object keep its locators?"
+- *Every locator as a field* (or getter / `@FindBy`, in the repo's syntax)
+- *By use*: a field if used in 2+ methods, a local variable if used twice in one method, inline if used once
+- *In a separate locator map or file*: `<detected file>` (only if the repo has one)
+Preview: the same small page object written each way. Put the counts found in the descriptions.
 
-**C1. Test-id attribute** (only when `mixed`, or when it differs from what the recording shows)
-"Recorded elements have `<attr seen in the JSON>`; your tests use `<attr seen in code>`. Which attribute should locators prefer?"
-Options: each attribute with its counts in code and in the recording.
+## Round 3: values, report steps and the test
 
-**C2. Fallback when there is no test id** (only when no written policy exists and the code is `mixed`)
-"The element `<a real element from the sample with no test id>` has no test id. Which locator should be the first choice?"
-- *Role + accessible name*, for example `getByRole('button', { name: 'Save' })` (Recommended for Playwright and Testing Library)
-- *CSS from `id` / `name` / stable `data-*`* (Recommended for Selenium)
-- *Visible text*
-Preview: the locator for that element in each style, written in the project's syntax.
+**N4. Values**
+"Where do recorded values come from, such as the typed e-mail or the expected text 'Order created'?"
+- *Parameters, passed from the test*: `fillEmail(String email)`, `assertMessageHasText(String expected)`
+- *Inside the page object*: `fillEmail()` types the recorded value
+- *Test data constants or files*: `<detected test data location>`, passed from the test
+Preview: one fill and one text check, in each style.
 
-**C3. Repeated elements in a container** (only when the sample has `containerHtml`, or the code is `mixed`)
-"The recording clicks `<element>` inside `<containerLabel>`. How should the code find the right one?"
-- *Find the container by its label or test id, then the element inside it* (Recommended)
-- *A component class for the container* (row, card, dialog) with a method
-- *Your existing helper* `<detected helper name>` (only when found)
-Preview: the code for that real step.
+**N5. Report steps** (only when the repo uses `@Step`, `test.step`, `allure.step`, Serenity steps or a similar wrapper)
+"Your methods use `<detected annotation>`. How should a generated method be described in the report?"
+Preview, per option, two methods with their step text, for example `@Step("Fill username with {0}")` and `@Step("Assert welcome message is visible")`:
+- *The repo's existing wording*, with parameter placeholders as the repo writes them (Recommended)
+- *The recorded `actionName`*, for example `@Step("Fill \"Username\" with {0}")`
+- *No step text on new methods*
 
-**C4. Network waits** (only when the sample has `triggeredRequests`, or the code is `mixed`)
-"The step `<real step>` calls `<METHOD path>`. What should the test wait for after it?"
+**N6. How a test starts**
+"How should a generated test reach the first recorded page?"
+- *The repo's open helper with the start URL*: `<detected helper, e.g. open(startUrl)>`
+- *Direct navigation*: `page.goto(...)`, `driver.get(...)`, `cy.visit(...)`
+- *Start from the home page and navigate through the UI as recorded*
+Preview: the first lines of a test for each.
+
+**N7. Test file and name**
+"Where should a generated test go, and how is it named? For a recording named 'Create order with discount':"
+- *A new file per recording*: `<CreateOrderWithDiscountTest / create-order-with-discount.spec.ts>` with `<shouldCreateOrderWithDiscount / 'create order with discount'>`
+- *Added to the existing spec of that feature area*, for example `<detected spec file>`
+Build the names with the repo's real patterns.
+
+## Round 4: patterns and flows (ask only what the scan left ambiguous)
+
+**P1. Flows** (only when the repo has a layer between tests and page objects: flows, steps, actions, tasks, helpers that call several pages)
+"Your repo has `<flows layer path>` (for example `<real flow method>`). When a recording goes through several pages for one business goal, where should that code go?"
+- *A flow method in `<flows layer>`, called from the test* (Recommended when tests mostly call flows)
+- *Page object calls directly in the test*
+Preview: both, in the project's syntax.
+
+**P2. Shared components** (only when the repo has component classes, or `mixed`)
+"Parts shared by many pages (header, menu, modal, table row) are modelled as `<detected pattern, e.g. components/HeaderComponent attached to BasePage>`. Should new shared parts follow it?"
+Preview: a small component and how a page exposes it.
+- *Yes, a component class like `<exemplar>`* (Recommended)
+- *Methods on each page object*
+
+**P3. Registration** (only when `mixed`, or a new page must be wired in several places)
+"A new page object has to be wired in: `<files found, e.g. fixtures/pages.ts and App.ts>`. Should /generate-autotest update them every time it adds a page?"
+Preview: the lines it would add.
+
+**P4. Locator policy** (only when `mixed`)
+"Your locators prefer different attributes: `<variant A>` (N uses) and `<variant B>` (M uses). Which should generated locators prefer, and what comes next when an element has none?"
+Preview: one element located both ways. Where locators are declared is N3, not this question.
+
+**P5. Where assertions live** (only when `mixed`)
+"Some checks live in page objects (`<example assert method>`) and some in tests (`<example expect>`). Where should generated checks go?"
+Preview: one check both ways.
+
+**P6. Network waits** (only when the code is `mixed` or `unknown`)
+"When a recorded step calls the backend (for example a click that calls `/api/cart`), what should the code wait for?"
 - *That response* (`waitForResponse` / `cy.intercept` + `cy.wait`) (Recommended for Playwright and Cypress)
 - *Only the UI result*: the next locator or assertion waits by itself (Recommended for Selenium)
-- *Your wait helper* `<detected helper>` (only when found)
-In the question text, list the requests you will ignore as noise (`/cdn-cgi/*`, analytics). The user can add more under "Other".
+- *Your wait helper* `<detected helper>`
+In the question text, list the requests the generator ignores as noise (`/cdn-cgi/*`, analytics, tracking).
 
-**C5. Autocomplete and custom dropdowns** (only when the sample has a `Select` step on an element that is not a `<select>`)
-"The step `<real actionName>` picks an option from a custom dropdown on `<element>`. How should the code pick it?"
-- *Your helper* `<detected combobox/autocomplete helper>` (Recommended when found)
-- *Type, then click the option by its name*, for example `getByRole('option', { name })` (Recommended otherwise)
-- *Type, then keyboard: ArrowDown and Enter*
+**P7. Repeated elements** (only when the code is `mixed`, or a row/card helper or component exists)
+"A recording can click a button inside one table row or card, picked by its label. How should the code find the right one?"
+- *Find the container by its label or test id, then the element inside it* (Recommended)
+- *A component class for the container* (row, card, dialog) with a method
+- *Your existing helper* `<detected helper name>`
+Preview: the code for one such step, in the project's syntax.
 
-**C6. Languages** (only when the sample switches language, or the project has i18n helpers)
-"The recording switches the site to `<locale>` and then clicks `<translated element>`. Do your tests run in more than one language?"
-- *Yes: never locate by visible text; use attributes or your translation helper* `<detected helper>`
-- *No: text locators are fine; the language switch is just a step* (Recommended when no i18n helpers exist)
+## Fixed rules (never ask)
 
-**C7. Groups of similar elements** (only when the sample acts on several elements of one group: checkboxes or radios with one `name`, links of one menu, and the code is `mixed` or `unknown`)
-"The recording checks `<I have a bike>`, `<I have a car>` and `<I have a boat>`, all in the group `<vehicle>`. How should the page object expose them?"
-- *One method with a parameter*, for example `checkVehicle('Bike')` (Recommended when the project already does this)
-- *One method per element*, for example `checkBike()`, `checkCar()`
-Preview: both versions, in the project's syntax.
+- Preconditions: always a `// Precondition: <text>` comment at the top of the test.
+- One step = one method. Every recorded, manual or assertion step is one page object method, and the test makes one call per step. A composed step (`SUBGROUP`, `COMBINED`) is one method too: composing is how the tester decides method size. Never merge or split steps.
+- Method names follow the step name the tester recorded (`actionName`), turned into an identifier in the repo's casing. Never rename steps into other verbs.
+- Steps without an element (`MANUAL`, `ASSERTION_WITHOUT_ELEMENT`): a method with an empty body and a `// TODO: <actionName>` comment; the test calls it and continues.
+- Every recorded step is generated, even one that looks pointless. The user curates the recording.
+- Only recorded checks are generated. A recording without checks gives a test without checks.
 
-## Round D: data and preconditions (built from the sample recording)
+## Gaps (only when the scan found no existing pattern; add to any round with space)
 
-**D1. Preconditions** (one question per precondition in the sample, at most 3 in a round; group similar ones)
-"The recording requires: `<precondition text>`. How should the test make this true?"
-Options: the matching helpers from subagent C, best match first, with signatures. Plus:
-- *Leave a `// Precondition:` comment, do not automate it*
-- *Create a new helper* (only when the user wants the generator to write helpers)
+Ask each only when the repo has no example to follow. Otherwise the generator copies what the repo does.
 
-**D2. Passwords** (only when the sample has `••••••••`, or login is recorded)
-"The recording masks a password on `<field>`. Where should the test take it from?"
-Options: the secret sources found (env var name, config key, test-user fixture), then *An environment variable that I will name*.
+**G3. Passwords and test data** (only when the scan found no secret source or no data helpers)
+"Recordings mask passwords as `••••••••`, and contain the values the tester typed. Where should tests take passwords and test data from?"
+Options: the sources found (env var names, config keys, fixtures, factories), then *An environment variable that I will name*.
 
-**D3. Recorded input values** (only when the sample creates data: forms with names, e-mails, titles)
-"The recording typed `<real value>` into `<field>`. What should the test type?"
-- *A unique value from your data helper* `<faker/factory found>` (Recommended for fields that create records)
-- *The recorded value, as is*
-- *A value from your test data files*
+## Install target (ask only when it is not clear)
 
-**D4. Steps the recorder could not automate** (only when the sample has `MANUAL` or `ASSERTION_WITHOUT_ELEMENT`)
-"`<real MANUAL actionName>` has no element. What should the generator write for such steps?"
-- *A TODO comment, and the test continues* (Recommended)
-- *Mark the test as not finished* (`test.fixme`, `@Disabled`, `pytest.mark.skip`) with the step text
-- *Map it to an existing helper when one matches, otherwise a TODO*
+**I1. Agents** (multi-select; skip when only the agent running this setup is detected: install for it and say so)
+"Which AI coding agents does your team use in this repo? /generate-autotest is installed for each one."
+Options: the agents detected (agent folders, instruction files), then Claude Code, Cursor, GitHub Copilot, Codex.
 
-**D5. Suspicious steps** (only when the sample has one; see "Suspicious steps" in recording-json.md)
-"Step <n>, `<actionName>`, looks like it did nothing: <reason, e.g. a click on a wrapper <div> with no navigation or request after it>. What should the generator do with steps like this?"
-- *Keep the step with a warning comment, and list it in the report* (Recommended)
-- *Skip it with a TODO comment, and list it in the report*
-- *Stop and ask me each time*
+## Test project (ask first, only when there is more than one)
 
-**D6. No expected results** (only when the sample has no assertion steps)
-"This recording has no expected results: it only does things. What should the generated test check?"
-- *Only what the actions prove*: the final URL, checked state, selected option, filled value (Recommended)
-- *Nothing: add a TODO for the expected result and list it in the report*
-- *Stop and ask me for the expected result*
-
-## Conditional questions (add to any round with space; only when detected)
-
-- **Tags**: "Your tests carry tags like `<examples>`. Which tags should a generated test get?" (options from the tags found; multi-select)
-- **Test-management ID**: "Tests link to `<TestRail/Xray/Jira>` with `<annotation>`. Where should the generator take the ID from?" (*Ask me for it each time* / *From the recording name, e.g. `C1234 Create order`* / *Leave it empty*)
-- **Report steps**: "Your methods use `<@Step / allure.step>`. Add it to every new page object method?"
-- **One test or a file per test**: only when files hold several tests and a "home" file per area is clear.
-- **Single-page exports**: "You will also export single pages to build page objects. Should the generator accept those files too?"
+**T1.** "This repo has N UI test projects. Which one should generated tests go to?" Options: each project with its runner and file count.
 
 ## After the last round: confirm the profile
 
-Print a short summary (at most 15 lines): the confirmed facts and the decisions, grouped as in the profile. Then go to step 4 of SKILL.md. Do not ask "Is this right?" as a separate question: the user corrects the summary with a message, and the validation in step 5 shows a real result.
+Print a short summary (at most 15 lines): the structure the generator will follow (folders, page object shape, test body shape, flows, components), the decisions, and the rules that came from framework defaults. Then go to step 3 of SKILL.md. The user corrects the summary with a message if needed.

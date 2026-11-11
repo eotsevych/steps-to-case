@@ -32,7 +32,7 @@ Each step is covered in detail, with short videos, in the **[documentation](http
 
 ## Generate tests in your own framework
 
-[`skills/stepstocase-setup`](skills/stepstocase-setup) is an agent skill that builds a test generator for your project. It works in Claude Code, Cursor, GitHub Copilot, Codex, Gemini CLI and any other agent that supports [Agent Skills](https://agentskills.io). It scans your test framework (Playwright, Cypress, Selenium, WebdriverIO, Selenide, BDD; any language), asks only the questions the scan cannot answer, and writes a `stepstocase-generate-test` skill that follows your conventions. It installs that skill for every agent your team uses, then tests it on one of your recordings.
+[`skills/stepstocase-setup`](skills/stepstocase-setup) is an agent skill that builds a test generator for your project. It works in Claude Code, Cursor, GitHub Copilot, Codex, Gemini CLI and any other agent that supports [Agent Skills](https://agentskills.io). It scans your test framework (Playwright, Cypress, Selenium, WebdriverIO, Selenide, BDD; any language), asks only the questions the scan cannot answer, and writes a `/generate-autotest` command that follows your conventions, installed for every agent your team uses.
 
 Install it in your test repo. The installer asks which agents to install for:
 
@@ -40,7 +40,10 @@ Install it in your test repo. The installer asks which agents to install for:
 npx skills add eotsevych/steps-to-case --skill stepstocase-setup
 ```
 
-Then ask your agent: "use stepstocase-setup with path/to/recording.json" (in Claude Code: `/stepstocase-setup path/to/recording.json`).
+Then, in your test repo:
+
+1. Run `/stepstocase-setup` once (in other agents: "use the stepstocase-setup skill"). It takes no arguments.
+2. Generate a test from any recording: `/generate-autotest path/to/recording.json`.
 
 ## Features
 
