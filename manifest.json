@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "StepsToCase",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Turn recorded QA steps into structured test cases with rich metadata",
   "permissions": [
     "activeTab",

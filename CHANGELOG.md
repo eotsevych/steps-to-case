@@ -1,5 +1,39 @@
 # Changelog · Історія змін
 
+## 1.0.3 — November 2026 · листопад 2026
+
+### English
+
+#### New
+
+- **Test generator for your framework.** The [`stepstocase-setup`](skills/stepstocase-setup) agent skill scans your test repository and writes a `/generate-autotest` command that turns recordings into tests your team's way. It works with Claude Code, Cursor, GitHub Copilot, Codex and other agents. Install it with `npx skills add eotsevych/steps-to-case --skill stepstocase-setup`.
+- **More context in the export**, so generated tests need less guessing:
+  - `pageDomain` on each page: the site the page is on, for tests that cross sites.
+  - `pageQuery` on each step, and the query string in `startUrl`: pages like `tryit.asp?filename=…` can be opened again. Secret-looking values (tokens, codes, keys) are masked.
+  - `tab` on each step: the browser tab it ran in, when the recording opened new tabs.
+  - `frameId` and `frameName` on steps inside an iframe: the iframe can be found even when it has no URL of its own.
+
+#### Fixed
+
+- **Step names of icon buttons.** A button without text was named after its CSS selector (`Click on "#_R_2pt4b36_"`). It now gets its own accessible name (`Click on "Open Copilot menu"`).
+- **Steps inside iframes** lost their `frameUrl` after the browser restarted the extension's background worker during a recording.
+
+### Українська
+
+#### Нове
+
+- **Генератор тестів для вашого фреймворку.** Скіл для AI-агентів [`stepstocase-setup`](skills/stepstocase-setup) сканує репозиторій з тестами й створює команду `/generate-autotest`, яка перетворює записи на тести так, як їх пише ваша команда. Працює з Claude Code, Cursor, GitHub Copilot, Codex та іншими агентами. Встановлення: `npx skills add eotsevych/steps-to-case --skill stepstocase-setup`.
+- **Більше контексту в експорті**, щоб згенерованим тестам доводилося менше вгадувати:
+  - `pageDomain` для кожної сторінки: сайт, на якому вона відкрита, для тестів, що переходять між сайтами.
+  - `pageQuery` для кожного кроку та рядок запиту в `startUrl`: сторінки на кшталт `tryit.asp?filename=…` можна відкрити знову. Значення, схожі на секрети (токени, коди, ключі), замасковано.
+  - `tab` для кожного кроку: вкладка браузера, у якій він виконаний, якщо запис відкривав нові вкладки.
+  - `frameId` і `frameName` для кроків усередині iframe: iframe можна знайти, навіть якщо в нього немає власної URL-адреси.
+
+#### Виправлено
+
+- **Назви кроків для кнопок-іконок.** Кнопка без тексту отримувала назву за CSS-селектором (`Click on "#_R_2pt4b36_"`). Тепер вона отримує власну доступну назву (`Click on "Open Copilot menu"`).
+- **Кроки всередині iframe** втрачали `frameUrl`, якщо браузер перезапускав фоновий процес розширення під час запису.
+
 ## 1.0.2 — November 2026 · листопад 2026
 
 First public version in the [Chrome Web Store](https://chromewebstore.google.com/detail/stepstocase/eekhjmlfbikagoennaldhdbliogklfec).
