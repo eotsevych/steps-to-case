@@ -30,6 +30,21 @@ StepsToCase is a Chrome extension for QA engineers. You walk through a test in t
 
 Each step is covered in detail, with short videos, in the **[documentation](https://eotsevych.github.io/steps-to-case/)**.
 
+## Generate tests in your own framework
+
+[`skills/stepstocase-setup`](skills/stepstocase-setup) is an agent skill that builds a test generator for your project. It works in Claude Code, Cursor, GitHub Copilot, Codex, Gemini CLI and any other agent that supports [Agent Skills](https://agentskills.io). It scans your test framework (Playwright, Cypress, Selenium, WebdriverIO, Selenide, BDD; any language), asks only the questions the scan cannot answer, and writes a `/generate-autotest` command that follows your conventions, installed for every agent your team uses.
+
+Install it in your test repo. The installer asks which agents to install for:
+
+```bash
+npx skills add eotsevych/steps-to-case --skill stepstocase-setup
+```
+
+Then, in your test repo:
+
+1. Run `/stepstocase-setup` once (in other agents: "use the stepstocase-setup skill"). It takes no arguments.
+2. Generate a test from any recording: `/generate-autotest path/to/recording.json`.
+
 ## Features
 
 - Records click, double click, fill, press, select, check and uncheck

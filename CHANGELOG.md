@@ -1,5 +1,21 @@
 # Changelog · Історія змін
 
+## Test generator skill — November 2026 · листопад 2026
+
+No change to the extension: version 1.0.2 works with it.
+
+Без змін у розширенні: працює з версією 1.0.2.
+
+### English
+
+- **Test generator for your framework.** The [`stepstocase-setup`](skills/stepstocase-setup) agent skill scans your test repository and writes a `/generate-autotest` command that turns recordings into tests your team's way. It works with Claude Code, Cursor, GitHub Copilot, Codex and other agents. Install it with `npx skills add eotsevych/steps-to-case --skill stepstocase-setup`.
+- **Documentation:** section 6 explains how to install and run it.
+
+### Українська
+
+- **Генератор тестів для вашого фреймворку.** Скіл для AI-агентів [`stepstocase-setup`](skills/stepstocase-setup) сканує репозиторій з тестами й створює команду `/generate-autotest`, яка перетворює записи на тести так, як їх пише ваша команда. Працює з Claude Code, Cursor, GitHub Copilot, Codex та іншими агентами. Встановлення: `npx skills add eotsevych/steps-to-case --skill stepstocase-setup`.
+- **Документація:** розділ 6 пояснює, як його встановити й запустити.
+
 ## 1.0.2 — November 2026 · листопад 2026
 
 First public version in the [Chrome Web Store](https://chromewebstore.google.com/detail/stepstocase/eekhjmlfbikagoennaldhdbliogklfec).
