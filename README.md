@@ -45,6 +45,8 @@ Then, in your test repo:
 1. Run `/stepstocase-setup` once (in other agents: "use the stepstocase-setup skill"). It takes no arguments.
 2. Generate a test from any recording: `/generate-autotest path/to/recording.json`.
 
+Step-by-step guide and FAQ: [skills/stepstocase-setup/README.md](skills/stepstocase-setup/README.md).
+
 ## Features
 
 - Records click, double click, fill, press, select, check and uncheck
