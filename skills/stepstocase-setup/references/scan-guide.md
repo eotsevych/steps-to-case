@@ -123,6 +123,7 @@ Then compare it with the sample recording (if you have one):
 - Which `componentTag` values appear? Is there a component class for each?
 - Which `preconditions` appear? Is there a helper for each?
 - Are there containers, frames, masked passwords, triggered requests, `MANUAL` steps, `SUBGROUP`s? Ask only about those that appear, or that the team will clearly meet.
+- Apply "Quirks in real recordings" from recording-json.md and note what this sample has: page types by URL template (and whether a page object with that route exists: search route constants, `goto`/`open` paths and `url` fields), noise requests, custom-combobox selects, a language switch, wrapper clicks, meaningless names, steps filed under the wrong page. Each one drives a question (B5, B6, C4 to C6, D5) or a rule.
 
 ## 4. Framework defaults (use when the profile says unknown and the user picks the default)
 

@@ -19,6 +19,9 @@ Allowed fixes:
 - Frames: go through the frame from `frameUrl`.
 - Steps the recorder does not capture: hover, scroll into view, close a cookie banner or overlay, wait for an animation to end.
 - Test data that must be unique.
+- A step filed under the wrong page (navigation recorded one step late): move the call to the page object where the element really is.
+- A wrapper click: click the interactive child with the same text instead.
+- A wait on a noise request: remove it, and wait for the UI result or the business request.
 
 Never:
 - change an expected value, or remove, skip or weaken an assertion;
@@ -29,7 +32,8 @@ Never:
 Stop and report (do not "fix") when:
 - the same failure repeats after a fix;
 - the only way to pass is to change an assertion;
-- the app behaves differently from the recording (a missing element, different text, a different page).
+- the app behaves differently from the recording (a missing element, different text, a different page);
+- the browser is blocked by bot protection (a Cloudflare challenge, a captcha, "verify you are human"). That is an environment problem: report it, and suggest running against a test environment or an allowlisted runner.
 
 These are signs of a real product change or bug.
 

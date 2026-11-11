@@ -2,6 +2,8 @@
 
 Ask with your agent's structured question tool if it has one (for example `AskUserQuestion` in Claude Code). If not, ask in chat as numbered questions with lettered options, and wait for the answers. One round is at most 4 questions. Plan for at most 4 rounds. A usual interview is 2 to 3 rounds, about 8 to 10 questions.
 
+If more questions qualify than fit in 4 rounds, keep this order: A, then B1, then the questions whose answer the scan cannot guess. Drop the questions whose Recommended option is backed by strong evidence. Use that option as the rule and show it in the summary at the end.
+
 In this file, "preview" means a short code block shown with an option, and "multi-select" means the user may pick several options. "Other" is always allowed: the user can answer in their own words.
 
 ## Rules for every question
@@ -60,6 +62,23 @@ Preview: that real assertion written both ways.
 - *A step block in the test* (`test.step`, `allure.step`, `@Step`): sub-steps stay visible in the report
 - *A flow/helper method* shared across pages (only if a flows/actions layer exists)
 
+**B5. Page types** (only when two or more recorded pages share a URL template or a `pageName`)
+"The recording visits N pages. By their URLs they look like M page types. Should the generator group them like this?"
+Preview: the proposed grouping, one line per page type, with the matching existing page object when there is one:
+```
+/creators/:owner/:repo          <- pages 2, 5, 7 ("skills", "skills", "skills" /es/)  -> CreatorRepoPage (exists)
+/creators/:owner/:repo/:skill   <- pages 1, 6                                        -> SkillPage (new)
+/                               <- page 4                                            -> HomePage (exists)
+```
+- *Group by URL template* (Recommended)
+- *One page object per recorded page*: only for apps whose URLs do not show the page type
+
+**B6. Page tags** (only when the sample has `pageTag`)
+"Pages <list> are tagged `<pageTag>`. What does that tag mean in your test code?"
+- *A separate folder or namespace* (for example a redesign): `<detected folder>` (Recommended when such folders exist)
+- *A different base class or layout*
+- *Nothing: ignore it* (Recommended when no such split exists)
+
 ## Round C: locators and waits
 
 **C1. Test-id attribute** (only when `mixed`, or when it differs from what the recording shows)
@@ -85,6 +104,18 @@ Preview: the code for that real step.
 - *That response* (`waitForResponse` / `cy.intercept` + `cy.wait`) (Recommended for Playwright and Cypress)
 - *Only the UI result*: the next locator or assertion waits by itself (Recommended for Selenium)
 - *Your wait helper* `<detected helper>` (only when found)
+In the question text, list the requests you will ignore as noise (`/cdn-cgi/*`, analytics). The user can add more under "Other".
+
+**C5. Autocomplete and custom dropdowns** (only when the sample has a `Select` step on an element that is not a `<select>`)
+"The step `<real actionName>` picks an option from a custom dropdown on `<element>`. How should the code pick it?"
+- *Your helper* `<detected combobox/autocomplete helper>` (Recommended when found)
+- *Type, then click the option by its name*, for example `getByRole('option', { name })` (Recommended otherwise)
+- *Type, then keyboard: ArrowDown and Enter*
+
+**C6. Languages** (only when the sample switches language, or the project has i18n helpers)
+"The recording switches the site to `<locale>` and then clicks `<translated element>`. Do your tests run in more than one language?"
+- *Yes: never locate by visible text; use attributes or your translation helper* `<detected helper>`
+- *No: text locators are fine; the language switch is just a step* (Recommended when no i18n helpers exist)
 
 ## Round D: data and preconditions (built from the sample recording)
 
@@ -109,6 +140,12 @@ Options: the secret sources found (env var name, config key, test-user fixture),
 - *A TODO comment, and the test continues* (Recommended)
 - *Mark the test as not finished* (`test.fixme`, `@Disabled`, `pytest.mark.skip`) with the step text
 - *Map it to an existing helper when one matches, otherwise a TODO*
+
+**D5. Suspicious steps** (only when the sample has one; see "Suspicious steps" in recording-json.md)
+"Step <n>, `<actionName>`, looks like it did nothing: <reason, e.g. a click on a wrapper <div> with no navigation or request after it>. What should the generator do with steps like this?"
+- *Keep the step with a warning comment, and list it in the report* (Recommended)
+- *Skip it with a TODO comment, and list it in the report*
+- *Stop and ask me each time*
 
 ## Conditional questions (add to any round with space; only when detected)
 

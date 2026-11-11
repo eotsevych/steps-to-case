@@ -24,6 +24,11 @@ Field reference: [references/recording-json.md](references/recording-json.md). P
    - Page object: `{{GOLD_PAGE_PATH}}`
    - Component: `{{GOLD_COMPONENT_PATH}}`
 3. Before writing a class or method, search for an existing one that already does it (`{{SEARCH_HINT}}`). Reuse it. Never duplicate.
+4. Clean the recording with "Quirks in real recordings" in the reference, and write down the result before you code:
+   - page types: each recorded page -> its URL template -> page object;
+   - per step: the verb, the locator source (stable attributes only), the business request to wait for (noise removed), and the page it really belongs to (navigation can be filed one step late);
+   - elements that repeat (the same element on several pages or in another language) -> one locator;
+   - suspicious steps, with the reason.
 
 ## 1. Where code lives
 
@@ -36,7 +41,7 @@ Field reference: [references/recording-json.md](references/recording-json.md). P
 Registration: {{REGISTRATION}}
 
 Mapping from the JSON:
-- `pageName` -> page class name {{PAGE_NAME_RULE}}. Use `pageUrl` and `pageTitle` to find an existing page object for the same page before making a new one.
+- Page type -> page class. The page type comes from the URL template (slugs, IDs and locale prefix as parameters) and `pageTitle`, not from `pageName`, which is often a slug. {{PAGE_NAME_RULE}} Look for an existing page object with the same route before making a new one ({{ROUTE_HINT}}).
 - `pageTag` -> {{PAGE_TAG_MAPPING}}
 - `componentTag` -> {{COMPONENT_TAG_MAPPING}}
 
@@ -44,7 +49,7 @@ Mapping from the JSON:
 
 Work page by page. Element declaration style: {{ELEMENT_STYLE}}. Method style: {{METHOD_STYLE}}.
 
-Get the verb of a `RECORDED` step from `actionName` (`Click on`, `Fill ... with`, `Press`, `Select ... from`, `Check`, `Uncheck`, `Double-click on`, `Navigate to`). `actionKind` is NOT the verb. If the step was renamed, infer the verb from the element (see "The action verb is NOT a field" in the reference).
+Get the verb of a `RECORDED` step from `actionName` (`Click on`, `Fill ... with`, `Press`, `Select ... from`, `Check`, `Uncheck`, `Double-click on`, `Navigate to`). `actionKind` is NOT the verb. If the step was renamed, infer the verb from the element (see "The action verb is NOT a field" in the reference). `Select` on an element that is not a `<select>` is a combobox pick: {{COMBOBOX_RULE}}
 
 | stepType | Code |
 |---|---|
@@ -53,7 +58,8 @@ Get the verb of a `RECORDED` step from `actionName` (`Click on`, `Fill ... with`
 | `ASSERTION_WITHOUT_ELEMENT`, `MANUAL` | {{MANUAL_POLICY}} Never invent UI actions for them. |
 | `MANUAL_WITHOUT_ELEMENT` (comment) | A one-line code comment above the sub-steps it labels. |
 | `COMBINED` | One method that does all its sub-actions, named from `actionName`. |
-| `SUBGROUP` | {{SUBGROUP_POLICY}} |
+| `SUBGROUP` | {{SUBGROUP_POLICY}} A group that ends on another page lives on the page where it starts. |
+| Suspicious step | {{SUSPICIOUS_POLICY}} |
 
 ## 3. Locators
 
@@ -61,7 +67,9 @@ Build each locator from the element fields. There are no selectors in the JSON. 
 
 {{LOCATOR_ORDER}}
 
-- Never use generated class names (`css-1x2y3z`, `sc-...`, `jsx-...`), long absolute CSS paths, or {{BANNED_LOCATORS}}.
+- Never use generated IDs, state attributes (`aria-expanded`, `data-state`, ...), the `value` attribute, utility or hashed classes, long absolute CSS paths, or {{BANNED_LOCATORS}}. The full list is in "Quirks" in the reference.
+- Text comes from `elementInnerText`, never `elementText`. Role names come from `elementAccessibleName`.
+- {{LOCALE_RULE}}
 - `containerLabel` / `containerHtml` present: {{CONTAINER_RULE}}
   Read `containerHtml` to find a stable attribute of the container and of the element inside it.
 - `frameUrl` present: {{FRAME_RULE}}
@@ -93,7 +101,7 @@ Example in this project's syntax:
 
 ## 6. Waits
 
-- `triggeredRequests` present: {{NETWORK_WAIT_RULE}}
+- `triggeredRequests`: first remove noise (`/cdn-cgi/*`, analytics and tracking, page fetches, {{NOISE_REQUESTS}}). If a business request remains: {{NETWORK_WAIT_RULE}} Match on the path; the JSON has no HTTP method.
 - `triggeredNavigationUrl` present: {{NAVIGATION_WAIT_RULE}}
 - Never: {{BANNED_WAITS}}
 
@@ -125,4 +133,4 @@ Skeleton:
 3. Existing classes and methods were reused; new ones are registered.
 4. Locators are scoped by container and frame wherever the JSON has one.
 5. No `••••••••`, no hard-coded secrets, no fixed sleeps.
-6. Reply with: the files changed, and a table `stepOrder | actionName | code call`. The heal loop uses this table.
+6. Reply with: the files changed; a table `stepOrder | actionName | page object | code call`, which the heal loop uses; and the suspicious steps with their reasons.
