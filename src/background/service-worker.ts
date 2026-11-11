@@ -57,6 +57,7 @@ function saveState(): Promise<void> {
       isPaused: state.isPaused,
       lastPagePath: state.lastPagePath,
       baseUrl: state.baseUrl,
+      tabIds: state.tabIds,
     },
     activeTabId,
   }).catch((error) => {
@@ -96,6 +97,7 @@ function resetState() {
     baseUrl: undefined,
     pendingContainer: undefined,
     isElementPickerActive: false,
+    tabIds: undefined,
   });
   activeTabId = undefined;
   saveState();
@@ -378,12 +380,16 @@ function handleMessage(
       state.actions = [];
       state.pages = [];
       state.testMetadata.timestamp = new Date().toISOString();
+      state.tabIds = [activeTabId];
 
       chrome.tabs.get(activeTabId, (tab) => {
         if (tab?.url) {
           state.testMetadata.startUrl = getPath(tab.url);
           try {
-            state.baseUrl = new URL(tab.url).origin;
+            const url = new URL(tab.url);
+            state.baseUrl = url.origin;
+            // The start page can need its query (?filename=…) to open; secrets are masked on export
+            state.testMetadata.startUrl += url.search;
           } catch { /* ignore */ }
           // This callback can run after the initial broadcast — persist again
           // so startUrl/baseUrl survive a service worker restart.
@@ -544,7 +550,18 @@ function handleMessage(
           ...parseRecordedPageContext(sender.tab.url, sender.tab.title ?? ''),
           pageTag: action.page.pageTag,
           frameUrl: action.page.frameUrl,
+          frameId: action.page.frameId,
+          frameName: action.page.frameName,
         };
+      }
+
+      // Number the tabs in order of first use; the starting tab stays unnumbered
+      const tabId = contentScript ? sender.tab?.id : undefined;
+      if (tabId !== undefined) {
+        state.tabIds ??= [];
+        if (!state.tabIds.includes(tabId)) state.tabIds.push(tabId);
+        const tab = state.tabIds.indexOf(tabId) + 1;
+        if (tab > 1) action.tab = tab;
       }
 
       // Attach pending container (pre-action pick) — single-shot, cleared after use
@@ -609,6 +626,7 @@ function handleMessage(
         baseUrl: imported.baseUrl,
         pendingContainer: undefined,
         isElementPickerActive: false,
+        tabIds: undefined,
       });
       broadcastState();
       sendResponse({ ok: true });

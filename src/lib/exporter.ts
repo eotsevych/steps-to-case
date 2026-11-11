@@ -86,6 +86,27 @@ export function displayFillValue(action: Action): string {
   return isPasswordField(action) ? PASSWORD_MASK : action.actionData?.value ?? '';
 }
 
+// Query parameters that can carry credentials (OAuth code/state, tokens, signed links)
+const SECRET_PARAM_RE = /token|secret|pass|auth|session|sig|key|code|nonce|state|jwt|otp|ticket|cred/i;
+
+/** "?code=abc&tab=2" → "?code=••••••••&tab=2": keeps the page openable without leaking secrets. */
+export function maskQuery(url: string): string {
+  return url.replace(/([?&])([^=&#]+)=([^&#]*)/g, (pair, sep: string, key: string) =>
+    SECRET_PARAM_RE.test(key) ? `${sep}${key}=${PASSWORD_MASK}` : pair);
+}
+
+/** Where the step ran: iframe, page query string and browser tab. Empty fields are left out. */
+function stepContext(action: Action) {
+  const { frameUrl, frameId, frameName, query } = action.page ?? {};
+  return {
+    ...(frameUrl ? { frameUrl } : {}),
+    ...(frameId ? { frameId } : {}),
+    ...(frameName ? { frameName } : {}),
+    ...(query ? { pageQuery: maskQuery(query) } : {}),
+    ...(action.tab ? { tab: action.tab } : {}),
+  };
+}
+
 // ── Map a single Action to ExportActionStep ─────────────────
 
 function mapActionToStep(
@@ -118,7 +139,7 @@ function mapActionToStep(
     elementTitle: action.element.title ?? '',
     elementAttributes: action.element.attributes ?? {},
     selectorContextText: action.selectors?.contextText ?? '',
-    ...(action.page?.frameUrl ? { frameUrl: action.page.frameUrl } : {}),
+    ...stepContext(action),
   };
 
   const triggeredRequests = filterAndShortenTriggeredRequests(
@@ -172,7 +193,7 @@ function mapAssertToStep(
     assertElementTitle: action.element.title ?? '',
     assertElementAttributes: action.element.attributes ?? {},
     assertSelectorContextText: action.selectors?.contextText ?? '',
-    ...(action.page?.frameUrl ? { frameUrl: action.page.frameUrl } : {}),
+    ...stepContext(action),
   };
 
   if (action.containerContext) {
@@ -350,8 +371,12 @@ function buildSubgroupSteps(
 // ── Main export function ────────────────────────────────────
 
 /** Identity of a page: same path on different domains (SSO login vs app) is a different page. */
+function pageDomain(page: StepPage): string {
+  return page.actions.find(a => a.page?.domain)?.page.domain ?? '';
+}
+
 export function pageKey(page: StepPage): string {
-  return `${page.actions.find(a => a.page?.domain)?.page.domain ?? ''}|${page.pageContext?.url ?? ''}`;
+  return `${pageDomain(page)}|${page.pageContext?.url ?? ''}`;
 }
 
 export function buildExportRecording(
@@ -377,6 +402,7 @@ export function buildExportRecording(
       pageName: page.name,
       pageUrl: page.pageContext?.url ?? '',
       pageTitle: page.pageContext?.title ?? '',
+      pageDomain: pageDomain(page),
       ...(page.pageTag ? { pageTag: page.pageTag } : {}),
       steps: [],
     };
@@ -428,7 +454,7 @@ export function buildExportRecording(
   const recording: ExportRecording = {
     testName: state.testMetadata.name || 'Untitled Test',
     baseUrl: state.baseUrl || '',
-    startUrl: state.testMetadata.startUrl || '',
+    startUrl: maskQuery(state.testMetadata.startUrl || ''),
     pages: deduplicatePages(pages, pageKeys),
   };
 
@@ -526,6 +552,7 @@ function deduplicatePages(pages: ExportPage[], keys: string[]): ExportPage[] {
         pageName: page.pageName,
         pageUrl: page.pageUrl,
         pageTitle: page.pageTitle,
+        pageDomain: page.pageDomain,
         ...(page.pageTag ? { pageTag: page.pageTag } : {}),
         steps: [...page.steps],
       });
