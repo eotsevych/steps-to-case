@@ -1,6 +1,6 @@
 ---
 name: generate-autotest
-description: Generate an automated {{FRAMEWORK}} test (and its page objects) from a StepsToCase recording JSON, following this project's conventions. Use when the user runs /generate-autotest, gives a StepsToCase .json export, or asks to turn a recorded test into code.
+description: Generate an automated {{FRAMEWORK}} test (and its page objects) from a StepsToCase recording JSON, following this project's conventions. Use when the user runs /generate-autotest, gives or pastes a StepsToCase JSON export, or asks to turn a recorded test into code.
 ---
 
 <!--
@@ -12,7 +12,7 @@ description: Generate an automated {{FRAMEWORK}} test (and its page objects) fro
 
 # Generate a {{FRAMEWORK}} test from a StepsToCase recording
 
-Input: the path to the recording JSON that the user gives with the request. If there is no path, ask for it.
+Input: the recording JSON, as a file path or pasted into the message. If there is neither, ask for it. Pasted JSON is used as is: do not save it to a file unless the user asks. If pasted JSON does not parse (cut off by the chat, or a broken copy), say so and ask for the file path instead of guessing the missing part.
 The JSON is the source of truth for what the test does. This project is the source of truth for how the code looks.
 Field reference: [references/recording-json.md](references/recording-json.md). Project facts: [references/framework-profile.md](references/framework-profile.md).
 

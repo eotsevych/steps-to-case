@@ -98,7 +98,7 @@ Do not change any existing test, page object or config.
 
 Report in at most 12 lines:
 - the files created, and the agent folders they are linked into;
-- how to use it: in Claude Code `/generate-autotest path/to/recording.json`; in other agents, "use the generate-autotest skill on path/to/recording.json";
+- how to use it: in Claude Code `/generate-autotest path/to/recording.json`, or `/generate-autotest` followed by the pasted JSON; in other agents, "use the generate-autotest skill on path/to/recording.json";
 - the rules that came from defaults rather than evidence or answers, and the API rules marked `not verified`, so the team can check them;
 - if Context7 was not available, one line: the user can set it up with `npx ctx7 setup` (it changes their agent configuration, so never run it yourself);
 - the open items: any helper that is missing, any convention the team should still decide;

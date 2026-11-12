@@ -97,6 +97,8 @@ Start a new agent session (only needed the first time after the setup), then:
 - Claude Code: `/generate-autotest path/to/recording.json`
 - Other agents: "use the generate-autotest skill on path/to/recording.json"
 
+Instead of a path, you can paste the JSON: type `/generate-autotest`, then paste the JSON from the extension's JSON tab (**Copy**) in the same message. A file is better for long recordings: some chats cut very long messages.
+
 The agent first shows how it read the recording (pages, tabs, which page object gets which step). Then it adds methods to existing page objects or creates new ones, writes the test, and compiles it. At the end it lists the files it changed and a table: step → page object → method call.
 
 ### 8. Review and run
@@ -106,6 +108,9 @@ Review the diff like any pull request, then run the test with your usual command
 If a generated test is not what your team wants, **fix the rule in `.agents/skills/generate-autotest/SKILL.md`**, not only the test. The next recording then comes out right.
 
 ## FAQ
+
+**Can I paste the JSON instead of saving a file?**
+Yes. Type `/generate-autotest` and paste the JSON in the same message. For long recordings, use a file: some chats cut very long messages, and the generator asks for a file when the pasted JSON is incomplete.
 
 **Do I give the setup a recording?**
 No. The setup learns from your code, not from a recording. A recording shows only a few pages of your app, so it would configure the generator wrongly.
