@@ -187,9 +187,9 @@ let lastOptionMouseDownEl: Element | null = null;
 let pendingRequests: TriggeredRequest[] = [];
 let lastActionId: string | null = null;
 let requestFlushTimer: ReturnType<typeof setTimeout> | null = null;
-const requestObserver = new PerformanceObserver((list) => {
+function collectResourceEntries(entries: PerformanceEntryList) {
   if (!isRecording) return;
-  for (const entry of list.getEntries()) {
+  for (const entry of entries) {
     if (entry.entryType === 'resource') {
       const res = entry as PerformanceResourceTiming & { responseStatus?: number };
       // Skip extension resources and data URIs
@@ -203,7 +203,8 @@ const requestObserver = new PerformanceObserver((list) => {
       });
     }
   }
-});
+}
+const requestObserver = new PerformanceObserver(list => collectResourceEntries(list.getEntries()));
 
 function startRequestTracking() {
   try {
@@ -894,6 +895,7 @@ function handleMouseDown(event: MouseEvent) {
 
   const customSelectOption = detectCustomSelectOption(target, target);
   if (!customSelectOption) return;
+  flushPendingFill();
 
   lastOptionMouseDownTs = Date.now();
   lastOptionMouseDownEl = target;
@@ -950,6 +952,8 @@ function handleClick(event: MouseEvent) {
   // The 2nd click of a double-click: handleDblClick records the double-click itself
   if (event.detail > 1) return;
   lastClickActionId = null;
+  // The click ends the typing: save the fill now, or it lands after the click (or is lost if the click navigates)
+  flushPendingFill();
 
   // Skip the click that follows a mousedown we already recorded on a
   // `[role="option"]` element. The widget has likely torn down the option by
@@ -1173,6 +1177,15 @@ function handleMouseOver(event: MouseEvent) {
 // Lifecycle
 // ============================================================
 
+/** Navigation kills the 500 ms fill debounce and the 2 s request timer — send both before the page goes. */
+function handlePageHide() {
+  if (!isRecording) return;
+  // The observer delivers entries asynchronously; take the ones it has not delivered yet
+  collectResourceEntries(requestObserver.takeRecords());
+  flushPendingFill();
+  flushRequestsToLastAction();
+}
+
 function startRecording() {
   if (isRecording) return;
   isRecording = true;
@@ -1182,6 +1195,7 @@ function startRecording() {
   document.addEventListener('input', handleInput, true);
   document.addEventListener('change', handleChange, true);
   document.addEventListener('keydown', handleKeyDown, true);
+  window.addEventListener('pagehide', handlePageHide);
   startRequestTracking();
   if (debugMode) console.log('[StepsToCase] Recording started');
 }
@@ -1200,6 +1214,7 @@ function stopRecording() {
   document.removeEventListener('input', handleInput, true);
   document.removeEventListener('change', handleChange, true);
   document.removeEventListener('keydown', handleKeyDown, true);
+  window.removeEventListener('pagehide', handlePageHide);
   if (debugMode) console.log('[StepsToCase] Recording stopped');
 }
 
