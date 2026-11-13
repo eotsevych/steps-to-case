@@ -10,6 +10,7 @@ import {
   getPreviousSiblings,
   getSelectorDebugMode,
 } from './selectorGenerator';
+import { isSecretInput } from './secretInputs';
 
 // ============================================================
 // Algorithm 1: Description Finder — configurable anchor list
@@ -435,7 +436,7 @@ export function collectElementInfo(el: Element): ElementInfo {
     attributes[attr.name] = attr.value;
   }
   // React mirrors the typed value into the `value` attribute — never export a password
-  if (el instanceof HTMLInputElement && el.type === 'password') delete attributes.value;
+  if (isSecretInput(el)) delete attributes.value;
 
   const label = getAssociatedLabelText(el) ?? undefined;
 
