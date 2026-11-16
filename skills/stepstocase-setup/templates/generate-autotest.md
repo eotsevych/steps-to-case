@@ -58,11 +58,12 @@ Work page by page. Element declaration style: {{ELEMENT_STYLE}}. Method style: {
 - Report steps: {{STEP_REPORT_RULE}}
 - Flows: {{FLOW_RULE}}
 
-Get the verb of a `RECORDED` step from `actionName` (`Click on`, `Fill ... with`, `Press`, `Select ... from`, `Check`, `Uncheck`, `Double-click on`, `Navigate to`). `actionKind` is NOT the verb. If the step was renamed, infer the verb from the element (see "The action verb is NOT a field" in the reference). `Select` on an element that is not a `<select>` is a combobox pick: {{COMBOBOX_RULE}}
+Get the verb of a `RECORDED` step from `actionType` when it is present. Older recordings have no `actionType`: then get it from `actionName` (`Click on`, `Fill ... with`, `Press`, `Select ... from`, `Check`, `Uncheck`, `Double-click on`, `Navigate to`), and if the step was renamed, infer the verb from the element (see "The action verb" in the reference). `actionKind` is NOT the verb. `Select` on an element that is not a `<select>` is a combobox pick: {{COMBOBOX_RULE}}
 
 | stepType | Code |
 |---|---|
 | `RECORDED` | One action method. Value from `actionValue`. |
+| `CAPTURE` | A method that reads the element's text at run time and returns it. The test keeps it in a variable named from `saveAs`. Never hard-code its `actionValue`. |
 | `ASSERTION_WITH_ELEMENT` | {{ASSERTION_PLACEMENT}} |
 | `ASSERTION_WITHOUT_ELEMENT`, `MANUAL` | A method with an empty body and a `// TODO: <actionName>` comment. The test calls it and continues. Never invent UI actions for them. |
 | `MANUAL_WITHOUT_ELEMENT` (comment) | A one-line code comment above the sub-steps it labels. |
@@ -83,6 +84,7 @@ Build each locator from the element fields. There are no selectors in the JSON. 
 - {{LOCALE_RULE}}
 - `containerLabel` / `containerHtml` present: {{CONTAINER_RULE}}
   Read `containerHtml` to find a stable attribute of the container and of the element inside it.
+- `containerIdentity` present: the tester chose what tells this container from the similar ones (see "Container identity" in the reference). Write the operation once, with those values as parameters: find the container that matches all of them, require exactly one match, then act on the element inside it (`buyProduct("Item 1")`, `editCustomer({ name: "Ben" })`). Never one method per item (`buyItem1`), and never a row position. If a method for this `containerLabel` and element already exists, call it with the new values. `containerIdentityUnique: false`: generate the step and add a `// TODO` that the recorded values matched more than one container.
 - `frameUrl` present: {{FRAME_RULE}} If `frameUrl` equals the page URL, or is missing for an element that is in an iframe, see "Frames" in the reference.
 - {{LOCATOR_STORAGE_RULE}}
 
@@ -113,6 +115,8 @@ Example in this project's syntax:
 | `text_equals` | `{{ASSERT_TEXT_EQUALS}}` with `actionValue` |
 | `text_contains` | `{{ASSERT_TEXT_CONTAINS}}` with `actionValue` |
 
+- `valueFrom` present: the expected text is the variable of the step whose `saveAs` has that name, not the literal `actionValue`.
+
 ## 6. Waits
 
 - `triggeredRequests`: first remove noise (`/cdn-cgi/*`, analytics and tracking, page fetches, {{NOISE_REQUESTS}}). If a business request remains: {{NETWORK_WAIT_RULE}} Match on the path; the JSON has no HTTP method.
@@ -124,6 +128,7 @@ Example in this project's syntax:
 - Preconditions (`preconditions[]`): one `// Precondition: <text>` comment each, at the top of the test, before the first step. Do not automate them.
 - Masked password `••••••••`: {{PASSWORD_SOURCE}}
 - Recorded input values: {{DATA_POLICY}}
+- A fill or select with `saveAs`: declare its value once and pass the same variable to the step and to every assertion with a matching `valueFrom`.
 - Start URL: {{START_URL_RULE}} (`baseUrl` in the JSON is only the environment it was recorded on).
 
 ## 8. The test
@@ -145,6 +150,6 @@ Skeleton:
 1. Run `{{COMPILE_COMMAND}}`. Fix every error you caused.
 2. Every top-level step is covered by a call, in `stepOrder`, and no step is lost.
 3. Existing classes and methods were reused; new ones are registered.
-4. Locators are scoped by container and frame wherever the JSON has one.
+4. Locators are scoped by container and frame wherever the JSON has one. Steps with `containerIdentity` pass its values as arguments.
 5. No `••••••••`, no hard-coded secrets, no fixed sleeps.
 6. Reply with: the files changed; a table `stepOrder | actionName | page object | code call`.

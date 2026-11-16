@@ -44,7 +44,7 @@ export function DescriptionPicker({ action, label, onSelectDescription }: Picker
   const contentRef = useRef<HTMLDivElement>(null);
 
   const candidates = action.selectors?.descriptionCandidates ?? [];
-  const selectedText = action.selectors?.contextText ?? '';
+  const selectedText = (action.type === 'capture' ? action.actionData?.captureName : action.selectors?.contextText) ?? '';
 
   useEffect(() => {
     if (!open) return;

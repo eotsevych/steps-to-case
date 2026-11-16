@@ -9,7 +9,9 @@ import {
   getCustomSelectorAttrs,
   getPreviousSiblings,
   getSelectorDebugMode,
+  rootOf,
 } from './selectorGenerator';
+import { isSecretInput } from './secretInputs';
 
 // ============================================================
 // Algorithm 1: Description Finder — configurable anchor list
@@ -87,7 +89,7 @@ function getAssociatedLabel(el: Element): Element | null {
   if (tag !== 'input' && tag !== 'select' && tag !== 'textarea') return null;
   if (el.id) {
     try {
-      const forLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      const forLabel = rootOf(el).querySelector(`label[for="${CSS.escape(el.id)}"]`);
       if (forLabel) return forLabel;
     } catch { /* invalid id for selector */ }
   }
@@ -435,7 +437,7 @@ export function collectElementInfo(el: Element): ElementInfo {
     attributes[attr.name] = attr.value;
   }
   // React mirrors the typed value into the `value` attribute — never export a password
-  if (el instanceof HTMLInputElement && el.type === 'password') delete attributes.value;
+  if (isSecretInput(el)) delete attributes.value;
 
   const label = getAssociatedLabelText(el) ?? undefined;
 

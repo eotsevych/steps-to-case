@@ -1101,7 +1101,8 @@
           <h3>Picking a Container, Step by Step</h3>
           <ol>
             <li><strong>Before the action:</strong> click <strong>+ Container</strong> in the Steps header, pick the area on the page, give it a name, then perform the action. The container is attached to the next recorded step.</li>
-            <li><strong>After the action:</strong> click the cube icon on a step. The tool highlights the recorded element, so you can move up to the right parent and click it.</li>
+            <li><strong>Which one of several:</strong> the name is for the kind of container (<em>Product card</em>). When the page has many of them, tick under <strong>Identify this one by</strong> what tells yours from the others, for example the product name. Tick a second field if the panel says other containers have the same value. The export keeps your choice in <code>containerIdentity</code>, and the generated test gets it as a parameter: <code>buyProduct("Item 1")</code>.</li>
+            <li><strong>After the action:</strong> click the cube icon on a step. The tool highlights the recorded element, so you can move up to the right parent and click it. Then give the container a name, the same way.</li>
             <li>A step with a container shows a <strong>Remove container</strong> button instead.</li>
             <li>Press <strong>Esc</strong> at any time to cancel picking.</li>
           </ol>
@@ -1159,7 +1160,8 @@
           <h3>Вибір контейнера крок за кроком</h3>
           <ol>
             <li><strong>До дії:</strong> натисніть <strong>+ Container</strong> у заголовку Steps, виберіть область на сторінці, дайте їй назву і виконайте дію. Контейнер прив'яжеться до наступного записаного кроку.</li>
-            <li><strong>Після дії:</strong> натисніть іконку куба на кроці. Інструмент підсвітить записаний елемент, щоб ви піднялися до потрібного батьківського блоку і клікнули на нього.</li>
+            <li><strong>Який саме з кількох:</strong> назва описує тип контейнера (<em>Product card</em>). Якщо на сторінці їх багато, позначте під <strong>Identify this one by</strong> те, що відрізняє ваш від інших, наприклад назву товару. Позначте ще одне поле, якщо панель повідомляє, що інші контейнери мають таке саме значення. Експорт зберігає ваш вибір у <code>containerIdentity</code>, а згенерований тест отримує його як параметр: <code>buyProduct("Item 1")</code>.</li>
+            <li><strong>Після дії:</strong> натисніть іконку куба на кроці. Інструмент підсвітить записаний елемент, щоб ви піднялися до потрібного батьківського блоку і клікнули на нього. Потім так само дайте контейнеру назву.</li>
             <li>На кроці з контейнером замість цього з'являється кнопка <strong>Remove container</strong>.</li>
             <li>Натисніть <strong>Esc</strong>, щоб скасувати вибір у будь-який момент.</li>
           </ol>
@@ -1352,7 +1354,8 @@
   }]
 }</code></pre>
           </div>
-          <p>Step types: <code>RECORDED</code>, <code>MANUAL</code>, <code>ASSERTION_WITH_ELEMENT</code>, <code>ASSERTION_WITHOUT_ELEMENT</code>, <code>COMBINED</code>, and <code>SUBGROUP</code>. Run steps in ascending <code>stepOrder</code> across all pages.</p>
+          <p>Step types: <code>RECORDED</code>, <code>CAPTURE</code>, <code>MANUAL</code>, <code>ASSERTION_WITH_ELEMENT</code>, <code>ASSERTION_WITHOUT_ELEMENT</code>, <code>COMBINED</code>, and <code>SUBGROUP</code>. Run steps in ascending <code>stepOrder</code> across all pages.</p>
+          <p>Saved values: a <code>CAPTURE</code> step (the <strong>Capture</strong> button) keeps an element's text under the name in <code>saveAs</code>. A fill or select that an assertion reuses also gets <code>saveAs</code>. An assertion with <code>valueFrom</code> expects the value saved under that name, so the generated test reads it into a variable instead of repeating the recorded text.</p>
 
           <h3 class="sub-title">Import a Recording</h3>
           <p>A downloaded JSON is also a save file. Use <strong>Upload JSON File</strong> on the start screen to open it again and keep editing.</p>
@@ -1417,7 +1420,8 @@
   }]
 }</code></pre>
           </div>
-          <p>Типи кроків: <code>RECORDED</code>, <code>MANUAL</code>, <code>ASSERTION_WITH_ELEMENT</code>, <code>ASSERTION_WITHOUT_ELEMENT</code>, <code>COMBINED</code> та <code>SUBGROUP</code>. Кроки виконуються за зростанням <code>stepOrder</code> через усі сторінки.</p>
+          <p>Типи кроків: <code>RECORDED</code>, <code>CAPTURE</code>, <code>MANUAL</code>, <code>ASSERTION_WITH_ELEMENT</code>, <code>ASSERTION_WITHOUT_ELEMENT</code>, <code>COMBINED</code> та <code>SUBGROUP</code>. Кроки виконуються за зростанням <code>stepOrder</code> через усі сторінки.</p>
+          <p>Збережені значення: крок <code>CAPTURE</code> (кнопка <strong>Capture</strong>) зберігає текст елемента під назвою з <code>saveAs</code>. Введення чи вибір, які повторно використовує перевірка, теж отримують <code>saveAs</code>. Перевірка з <code>valueFrom</code> очікує значення, збережене під цією назвою, тож згенерований тест читає його у змінну замість повторення записаного тексту.</p>
 
           <h3 class="sub-title">Імпорт запису</h3>
           <p>Завантажений JSON — це також файл збереження. Кнопка <strong>Upload JSON File</strong> на стартовому екрані відкриває його знову для редагування.</p>

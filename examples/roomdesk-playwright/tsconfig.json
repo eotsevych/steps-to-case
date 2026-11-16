@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "paths": {
+      "@pages/*": ["./src/pages/*"],
+      "@components/*": ["./src/components/*"],
+      "@fixtures": ["./src/fixtures/test.ts"],
+      "@data/*": ["./src/data/*"]
+    }
+  },
+  "include": ["src", "tests", "playwright.config.ts"]
+}

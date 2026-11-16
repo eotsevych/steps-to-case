@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Action, ContainerContext, HierarchyOption } from '../types';
+import { containerText } from '../lib/stepName';
 import { ActionsList } from './ActionsList';
 import { Button } from './components/ui/button';
 import { Check, Plus, Container, X, ArrowLeft } from 'lucide-react';
@@ -125,7 +126,7 @@ export function SingleStepRecorder({
           {pendingContainer && (
             <div data-qa="single-step-pending-container" className="flex items-center gap-2 px-3 py-1.5 mb-2 rounded-md border border-amber-300 bg-amber-50 text-amber-700">
               <span className="text-sm font-semibold flex-1 truncate">
-                Container: {pendingContainer.containerLabel}
+                Container: {containerText(pendingContainer)}
               </span>
               <Button
                 variant="ghost"

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ContainerContext } from '../types';
+import { containerText } from '../lib/stepName';
 import { Button } from './components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { Label } from './components/ui/label';
@@ -53,7 +54,7 @@ export function AddStepModal({ pendingContainer, onSave, onClose, onPickContaine
             <div className="flex items-center gap-2 p-2 bg-secondary rounded-md border border-amber-300">
               <Container className="w-3 h-3 text-amber-600 shrink-0" />
               <span className="text-sm flex-1 truncate text-foreground">
-                {pendingContainer.containerLabel}
+                {containerText(pendingContainer)}
               </span>
               <Button
                 variant="ghost"

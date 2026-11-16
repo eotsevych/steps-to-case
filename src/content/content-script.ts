@@ -13,12 +13,16 @@ import {
 } from '../injected/metadataCollector';
 import {
   generateSelectors,
+  queryScoped,
+  rootOf,
   setCustomSelectorAttributes,
   setLocatorAttributes,
   setLocatorHierarchy,
   setSelectorDebugMode,
 } from '../injected/selectorGenerator';
 import { stripContainerHtml } from '../injected/containerHtml';
+import { collectContainerIdentity } from '../injected/containerIdentity';
+import { isSecretInput, watchSecretInputs } from '../injected/secretInputs';
 import {
   DEFAULT_SETTINGS,
   type PageRecognitionRule,
@@ -99,10 +103,11 @@ function safeSelectorTest(test: () => Element | null): boolean {
 }
 
 function safeRuntimeSendMessage(message: unknown) {
+  // info, not warn: a warning lands under Errors on the extension card after every reload or update
   try {
     return chrome.runtime.sendMessage(message).catch((error) => {
       if (isExtensionContextInvalidatedError(error)) {
-        console.warn('[StepsToCase] Extension context invalidated. Reload the page after reloading the extension.');
+        console.info('[StepsToCase] Extension context invalidated. Reload the page after reloading the extension.');
         teardownInvalidatedContext();
         return undefined;
       }
@@ -110,7 +115,7 @@ function safeRuntimeSendMessage(message: unknown) {
     });
   } catch (error) {
     if (isExtensionContextInvalidatedError(error)) {
-      console.warn('[StepsToCase] Extension context invalidated. Reload the page after reloading the extension.');
+      console.info('[StepsToCase] Extension context invalidated. Reload the page after reloading the extension.');
       teardownInvalidatedContext();
       return Promise.resolve(undefined);
     }
@@ -187,9 +192,9 @@ let lastOptionMouseDownEl: Element | null = null;
 let pendingRequests: TriggeredRequest[] = [];
 let lastActionId: string | null = null;
 let requestFlushTimer: ReturnType<typeof setTimeout> | null = null;
-const requestObserver = new PerformanceObserver((list) => {
+function collectResourceEntries(entries: PerformanceEntryList) {
   if (!isRecording) return;
-  for (const entry of list.getEntries()) {
+  for (const entry of entries) {
     if (entry.entryType === 'resource') {
       const res = entry as PerformanceResourceTiming & { responseStatus?: number };
       // Skip extension resources and data URIs
@@ -203,7 +208,8 @@ const requestObserver = new PerformanceObserver((list) => {
       });
     }
   }
-});
+}
+const requestObserver = new PerformanceObserver(list => collectResourceEntries(list.getEntries()));
 
 function startRequestTracking() {
   try {
@@ -328,7 +334,7 @@ function findTargetElement(
   // 1. Try finding a selector that uniquely matches 1 element
   for (const sel of candidates) {
     try {
-      const matches = document.querySelectorAll(sel);
+      const matches = queryScoped(sel);
       if (matches.length === 1) {
         return matches[0];
       }
@@ -340,7 +346,7 @@ function findTargetElement(
   // 2. If multiple elements match, try disambiguating with target text
   for (const sel of candidates) {
     try {
-      const matches = Array.from(document.querySelectorAll(sel));
+      const matches = queryScoped(sel);
       if (matches.length > 0) {
         if (cleanText) {
           const textMatch = matches.find(el => {
@@ -440,7 +446,7 @@ function describePickerElement(el: Element | null): string {
 }
 
 function logPickerDebug(message: string, extra?: Record<string, unknown>) {
-  if (!isPickingElement) return;
+  if (!debugMode || !isPickingElement) return;
   if (extra) {
     console.log('[StepsToCase Picker]', message, extra);
     return;
@@ -740,7 +746,15 @@ function sendAction(type: ActionType, el: Element, extra?: Record<string, unknow
   const element = collectElementInfo(el);
   const page = collectPageContext();
   // Inside an iframe: the worker swaps in the tab's page; keep which frame the selectors belong to
-  if (!IS_TOP_FRAME) page.frameUrl = location.href.split(/[?#]/)[0];
+  if (!IS_TOP_FRAME) {
+    page.frameUrl = location.href.split(/[?#]/)[0];
+    // A srcdoc/document.write frame reports its parent's URL, so the <iframe> element is the only way to name it.
+    // frameElement is null for cross-origin frames; window.name still carries the name attribute there.
+    const frameEl = window.frameElement;
+    if (frameEl?.id) page.frameId = frameEl.id;
+    const frameName = frameEl?.getAttribute('name') || window.name;
+    if (frameName) page.frameName = frameName;
+  }
 
   // Page recognition: check rules and tag the page context
   for (const rule of pageRecognitionRules) {
@@ -799,6 +813,7 @@ function sendAction(type: ActionType, el: Element, extra?: Record<string, unknow
   // Wait 2s then flush network requests
   requestFlushTimer = setTimeout(() => {
     flushRequestsToLastAction();
+    lastActionId = null; // later traffic is noise: the worker would overwrite this step's list with it
   }, 2000);
 
   return tempId;
@@ -848,7 +863,7 @@ function detectCustomSelectOption(
 function findSelectWidget(option: Element): Element | null {
   const listboxId = option.closest('[role="listbox"]')?.id;
   const controller = listboxId
-    ? document.querySelector(`[aria-controls~="${CSS.escape(listboxId)}"], [aria-owns~="${CSS.escape(listboxId)}"]`)
+    ? rootOf(option).querySelector(`[aria-controls~="${CSS.escape(listboxId)}"], [aria-owns~="${CSS.escape(listboxId)}"]`)
     : null;
   // Select2/Chosen insert their container right after the <select> they replace
   const hidden = (controller ?? option).closest('.select2-container, .chosen-container')?.previousElementSibling;
@@ -888,6 +903,8 @@ function flushPendingFill() {
 function handleMouseDown(event: MouseEvent) {
   if (!event.isTrusted) return;
   if (!isRecording) return;
+  // Typed text goes first: a click within the 500 ms debounce (or one that navigates) would otherwise outrun it
+  flushPendingFill();
   if (event.button !== 0) return;
   const target = eventTarget(event);
   if (!target) return;
@@ -939,6 +956,7 @@ function handleClick(event: MouseEvent) {
     // Include stripped HTML when in container pick mode (pre-pick or post-hoc)
     if (containerPickTargetEl || isContainerPicking) {
       pickedMessage.containerHtml = stripContainerHtml(pickedTarget);
+      Object.assign(pickedMessage, collectContainerIdentity(pickedTarget));
     }
 
     safeRuntimeSendMessage(pickedMessage);
@@ -950,6 +968,8 @@ function handleClick(event: MouseEvent) {
   // The 2nd click of a double-click: handleDblClick records the double-click itself
   if (event.detail > 1) return;
   lastClickActionId = null;
+  // The click ends the typing: save the fill now, or it lands after the click (or is lost if the click navigates)
+  flushPendingFill();
 
   // Skip the click that follows a mousedown we already recorded on a
   // `[role="option"]` element. The widget has likely torn down the option by
@@ -980,7 +1000,7 @@ function handleClick(event: MouseEvent) {
     const label = (tag === 'label' ? clickTarget : target.closest('label')) as HTMLLabelElement | null;
     if (label) {
       const input = label.htmlFor
-        ? document.getElementById(label.htmlFor)
+        ? rootOf(label).getElementById(label.htmlFor)
         : label.querySelector('input, select, textarea');
       if (input && ['input', 'select', 'textarea'].includes(input.tagName.toLowerCase())) {
         clickTarget = input;
@@ -1106,7 +1126,7 @@ function handleInput(event: Event) {
 
   lastInputElement = target;
   // Never let a password leave the page: mask it before it is stored or shown
-  const isPassword = tag === 'input' && (target as HTMLInputElement).type === 'password';
+  const isPassword = isSecretInput(target);
   lastInputValue = isPassword ? PASSWORD_MASK : (target.value ?? (target as HTMLElement).innerText ?? '');
 
   if (fillDebounceTimer) clearTimeout(fillDebounceTimer);
@@ -1173,15 +1193,26 @@ function handleMouseOver(event: MouseEvent) {
 // Lifecycle
 // ============================================================
 
+/** Navigation kills the 500 ms fill debounce and the 2 s request timer — send both before the page goes. */
+function handlePageHide() {
+  if (!isRecording) return;
+  // The observer delivers entries asynchronously; take the ones it has not delivered yet
+  collectResourceEntries(requestObserver.takeRecords());
+  flushPendingFill();
+  flushRequestsToLastAction();
+}
+
 function startRecording() {
   if (isRecording) return;
   isRecording = true;
+  watchSecretInputs();
   document.addEventListener('mousedown', handleMouseDown, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('dblclick', handleDblClick, true);
   document.addEventListener('input', handleInput, true);
   document.addEventListener('change', handleChange, true);
   document.addEventListener('keydown', handleKeyDown, true);
+  window.addEventListener('pagehide', handlePageHide);
   startRequestTracking();
   if (debugMode) console.log('[StepsToCase] Recording started');
 }
@@ -1200,6 +1231,7 @@ function stopRecording() {
   document.removeEventListener('input', handleInput, true);
   document.removeEventListener('change', handleChange, true);
   document.removeEventListener('keydown', handleKeyDown, true);
+  window.removeEventListener('pagehide', handlePageHide);
   if (debugMode) console.log('[StepsToCase] Recording stopped');
 }
 
@@ -1324,6 +1356,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true;
 });
 
+// From page load, not from START: a password can be shown as text before the recording starts
+watchSecretInputs();
+
 // Load settings
 chrome.storage.sync.get('recorderSettings').then(result => {
   applyRecorderSettings(result.recorderSettings);
@@ -1335,19 +1370,25 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   applyRecorderSettings(changes.recorderSettings.newValue);
 });
 
-// On load, auto-start if this tab is the one being recorded (and not paused)
+// On load, auto-start if this tab is the one being recorded (and not paused).
+// The worker keeps `recordingOn` in storage so pages load without waking it when nobody records.
 try {
-  chrome.runtime.sendMessage({ type: 'IS_RECORDING' }, (response) => {
-    if (chrome.runtime.lastError) {
-      if (chrome.runtime.lastError.message?.includes('Extension context invalidated')) {
-        teardownInvalidatedContext();
+  chrome.storage.local.get('recordingOn').then(({ recordingOn }) => {
+    if (!recordingOn) return;
+    chrome.runtime.sendMessage({ type: 'IS_RECORDING' }, (response) => {
+      if (chrome.runtime.lastError) {
+        if (chrome.runtime.lastError.message?.includes('Extension context invalidated')) {
+          teardownInvalidatedContext();
+        }
+        return;
       }
-      return;
-    }
-    if (response?.on) {
-      startRecording();
-      if (debugMode) console.log('[StepsToCase] Auto-resumed recording after navigation');
-    }
+      if (response?.on) {
+        startRecording();
+        if (debugMode) console.log('[StepsToCase] Auto-resumed recording after navigation');
+      }
+    });
+  }).catch((error) => {
+    if (isExtensionContextInvalidatedError(error)) teardownInvalidatedContext();
   });
 } catch (error) {
   if (isExtensionContextInvalidatedError(error)) {

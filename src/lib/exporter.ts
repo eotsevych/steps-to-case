@@ -1,4 +1,5 @@
 import type {
+  ContainerContext,
   Action,
   ExpectedResult,
   ManualStep,
@@ -17,8 +18,12 @@ import type {
   ExportSubgroupChildStep,
   ExportSubgroupStep,
 } from '../types';
-import { getElementName, resolveCustomText } from './stepName';
+import { containerText, getElementName, resolveCustomText } from './stepName';
 import { filterAndShortenTriggeredRequests } from './triggeredRequests';
+import { buildVault, flattenActions, pageActions, type VaultEntry } from './vault';
+
+// Values later assertions use (saveAs / valueFrom), by step id. Set only while buildExportRecording runs.
+let linkedValues = new Map<string, VaultEntry>();
 
 // ── Action name formatting ──────────────────────────────────
 
@@ -56,12 +61,15 @@ function formatActionName(action: Action): string {
     case 'assert':
       result = `Verify: ${action.expectedResults?.[0]?.description || name}`;
       break;
+    case 'capture':
+      result = `Save text of "${name}" as "${action.actionData?.captureName ?? ''}"`;
+      break;
     default:
       result = `${action.type} on "${name}"`;
   }
 
   if (action.containerContext?.containerLabel) {
-    result += ` in "${action.containerContext.containerLabel}"`;
+    result += ` in "${containerText(action.containerContext)}"`;
   }
   return result;
 }
@@ -70,10 +78,30 @@ function formatActionName(action: Action): string {
 
 export const PASSWORD_MASK = '••••••••';
 
+/** The tester's choice of what tells this container from similar ones; absent when nothing was chosen. */
+function identityFields(container: ContainerContext | undefined) {
+  if (!container?.identity?.length) return {};
+  return {
+    containerIdentity: container.identity,
+    ...(container.identityUnique !== undefined ? { containerIdentityUnique: container.identityUnique } : {}),
+  };
+}
+
+function containerFields(container: ContainerContext | undefined) {
+  if (!container) return {};
+  return {
+    containerTag: container.containerTag,
+    containerLabel: container.containerLabel,
+    ...(container.containerHtml ? { containerHtml: container.containerHtml } : {}),
+    ...identityFields(container),
+  };
+}
+
 function isPasswordField(action: Action): boolean {
   if (action.type !== 'fill') return false;
   return !!(
     action.element.attributes['type'] === 'password' ||
+    /(current|new)-password/i.test(action.element.attributes['autocomplete'] ?? '') ||
     action.selectors?.primary?.value?.toLowerCase().includes('password') ||
     action.element.ariaLabel?.toLowerCase().includes('password') ||
     action.element.label?.toLowerCase().includes('password') ||
@@ -84,6 +112,27 @@ function isPasswordField(action: Action): boolean {
 /** Fill value safe to show or export: masked for anything that looks like a password field. */
 export function displayFillValue(action: Action): string {
   return isPasswordField(action) ? PASSWORD_MASK : action.actionData?.value ?? '';
+}
+
+// Query parameters that can carry credentials (OAuth code/state, tokens, signed links)
+const SECRET_PARAM_RE = /token|secret|pass|auth|session|sig|key|code|nonce|state|jwt|otp|ticket|cred/i;
+
+/** "?code=abc&tab=2" → "?code=••••••••&tab=2": keeps the page openable without leaking secrets. */
+export function maskQuery(url: string): string {
+  return url.replace(/([?&])([^=&#]+)=([^&#]*)/g, (pair, sep: string, key: string) =>
+    SECRET_PARAM_RE.test(key) ? `${sep}${key}=${PASSWORD_MASK}` : pair);
+}
+
+/** Where the step ran: iframe, page query string and browser tab. Empty fields are left out. */
+function stepContext(action: Action) {
+  const { frameUrl, frameId, frameName, query } = action.page ?? {};
+  return {
+    ...(frameUrl ? { frameUrl } : {}),
+    ...(frameId ? { frameId } : {}),
+    ...(frameName ? { frameName } : {}),
+    ...(query ? { pageQuery: maskQuery(query) } : {}),
+    ...(action.tab ? { tab: action.tab } : {}),
+  };
 }
 
 // ── Map a single Action to ExportActionStep ─────────────────
@@ -100,12 +149,15 @@ function mapActionToStep(
        action.actionData?.triggeredNavigation?.url ??
        '');
 
+  const saveAs = linkedValues.get(action.id)?.name;
   const step: ExportActionStep = {
     stepOrder,
-    stepType: 'RECORDED',
+    stepType: action.type === 'capture' ? 'CAPTURE' : 'RECORDED',
     actionKind: 'action',
+    actionType: action.type,
     actionName: resolveCustomText(action) || formatActionName(action),
     actionValue,
+    ...(saveAs ? { saveAs } : {}),
     triggeredNavigationUrl: action.actionData?.triggeredNavigation?.url ?? '',
     triggeredNavigationTitle: action.actionData?.triggeredNavigation?.title ?? '',
     elementTag: action.element.tagName ?? '',
@@ -118,7 +170,7 @@ function mapActionToStep(
     elementTitle: action.element.title ?? '',
     elementAttributes: action.element.attributes ?? {},
     selectorContextText: action.selectors?.contextText ?? '',
-    ...(action.page?.frameUrl ? { frameUrl: action.page.frameUrl } : {}),
+    ...stepContext(action),
   };
 
   const triggeredRequests = filterAndShortenTriggeredRequests(
@@ -134,13 +186,7 @@ function mapActionToStep(
     }));
   }
 
-  if (action.containerContext) {
-    step.containerTag = action.containerContext.containerTag;
-    step.containerLabel = action.containerContext.containerLabel;
-    if (action.containerContext.containerHtml) {
-      step.containerHtml = action.containerContext.containerHtml;
-    }
-  }
+  Object.assign(step, containerFields(action.containerContext));
 
   if (action.componentTag) step.componentTag = action.componentTag;
 
@@ -154,12 +200,15 @@ function mapAssertToStep(
   stepOrder: number,
   er: ExpectedResult | undefined = action.expectedResults?.[0],
 ): ExportAssertionStep {
+  // A linked value follows its source step, so editing that step's value updates the assertion
+  const source = er?.assertion?.expectedValueFrom ? linkedValues.get(er.assertion.expectedValueFrom) : undefined;
   const step: ExportAssertionStep = {
     stepOrder,
     stepType: 'ASSERTION_WITH_ELEMENT',
     actionKind: 'assertion',
     actionName: `Assert: ${er?.description ?? action.element.accessibleName ?? action.element.textContent ?? ''}`,
-    actionValue: er?.assertion?.expectedValue ?? '',
+    actionValue: source?.value ?? er?.assertion?.expectedValue ?? '',
+    ...(source ? { valueFrom: source.name } : {}),
     expectedResultsDescription: er?.description ?? '',
     assertElementType: (er?.assertion?.type ?? 'visible') as ExportAssertionType,
     assertElementTag: action.element.tagName ?? '',
@@ -172,16 +221,10 @@ function mapAssertToStep(
     assertElementTitle: action.element.title ?? '',
     assertElementAttributes: action.element.attributes ?? {},
     assertSelectorContextText: action.selectors?.contextText ?? '',
-    ...(action.page?.frameUrl ? { frameUrl: action.page.frameUrl } : {}),
+    ...stepContext(action),
   };
 
-  if (action.containerContext) {
-    step.containerTag = action.containerContext.containerTag;
-    step.containerLabel = action.containerContext.containerLabel;
-    if (action.containerContext.containerHtml) {
-      step.containerHtml = action.containerContext.containerHtml;
-    }
-  }
+  Object.assign(step, containerFields(action.containerContext));
 
   if (action.componentTag) step.componentTag = action.componentTag;
 
@@ -350,13 +393,34 @@ function buildSubgroupSteps(
 // ── Main export function ────────────────────────────────────
 
 /** Identity of a page: same path on different domains (SSO login vs app) is a different page. */
+function pageDomain(page: StepPage): string {
+  return page.actions.find(a => a.page?.domain)?.page.domain ?? '';
+}
+
 export function pageKey(page: StepPage): string {
-  return `${page.actions.find(a => a.page?.domain)?.page.domain ?? ''}|${page.pageContext?.url ?? ''}`;
+  if (!page.pageContext?.url) return page.id; // hand-made page: never merge with another
+  return `${pageDomain(page)}|${page.pageContext?.url ?? ''}`;
 }
 
 export function buildExportRecording(
   state: RecordingState,
 ): ExportRecording {
+  const steps = pageActions(state.pages);
+  const all = flattenActions(steps);
+  // Captures always get a name; typed and picked values only when an assertion uses them
+  const named = new Set([
+    ...all.filter(a => a.type === 'capture').map(a => a.id),
+    ...all.flatMap(a => (a.expectedResults ?? []).map(er => er.assertion?.expectedValueFrom)),
+  ]);
+  linkedValues = new Map(buildVault(steps).filter(e => named.has(e.actionId)).map(e => [e.actionId, e]));
+  try {
+    return buildRecording(state);
+  } finally {
+    linkedValues = new Map();
+  }
+}
+
+function buildRecording(state: RecordingState): ExportRecording {
   // Step A — Preconditions
   const preconditions = state.preconditions?.length
     ? state.preconditions
@@ -377,6 +441,7 @@ export function buildExportRecording(
       pageName: page.name,
       pageUrl: page.pageContext?.url ?? '',
       pageTitle: page.pageContext?.title ?? '',
+      pageDomain: pageDomain(page),
       ...(page.pageTag ? { pageTag: page.pageTag } : {}),
       steps: [],
     };
@@ -428,7 +493,7 @@ export function buildExportRecording(
   const recording: ExportRecording = {
     testName: state.testMetadata.name || 'Untitled Test',
     baseUrl: state.baseUrl || '',
-    startUrl: state.testMetadata.startUrl || '',
+    startUrl: maskQuery(state.testMetadata.startUrl || ''),
     pages: deduplicatePages(pages, pageKeys),
   };
 
@@ -491,6 +556,7 @@ function mapActionToSingleStep(
     containerTag: action.containerContext?.containerTag ?? '',
     containerLabel: action.containerContext?.containerLabel ?? '',
     containerHtml: action.containerContext?.containerHtml ?? '',
+    ...identityFields(action.containerContext),
   };
 }
 
@@ -526,6 +592,7 @@ function deduplicatePages(pages: ExportPage[], keys: string[]): ExportPage[] {
         pageName: page.pageName,
         pageUrl: page.pageUrl,
         pageTitle: page.pageTitle,
+        pageDomain: page.pageDomain,
         ...(page.pageTag ? { pageTag: page.pageTag } : {}),
         steps: [...page.steps],
       });

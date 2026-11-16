@@ -3,6 +3,8 @@
  * long attributes, SVGs) so an LLM can use the structural context for locator generation.
  */
 
+import { isSecretInput } from './secretInputs';
+
 const REMOVE_TAGS = new Set(['script', 'style', 'svg']);
 const STRIP_ATTRS = new Set(['style', 'src', 'srcset']);
 const EVENT_ATTR_RE = /^on/i;
@@ -12,6 +14,11 @@ const MAX_HTML_LEN = 2000;
 
 export function stripContainerHtml(container: Element): string {
   const clone = container.cloneNode(true) as Element;
+
+  // A secret input's typed value can sit in its `value` attribute; the clone has the same shape, so match by index
+  const originals = [container, ...Array.from(container.querySelectorAll('*'))];
+  const copies = [clone, ...Array.from(clone.querySelectorAll('*'))];
+  originals.forEach((el, i) => { if (isSecretInput(el)) copies[i].removeAttribute('value'); });
 
   // Remove noisy child elements entirely
   for (const tag of REMOVE_TAGS) {
@@ -29,9 +36,7 @@ export function stripContainerHtml(container: Element): string {
     for (const attr of attrs) {
       const name = attr.name.toLowerCase();
 
-      // React mirrors typed text into `value`; a password must not leave the page
-      const isPasswordValue = name === 'value' && node.getAttribute('type')?.toLowerCase() === 'password';
-      if (STRIP_ATTRS.has(name) || EVENT_ATTR_RE.test(name) || SVG_PATH_ATTRS.has(name) || isPasswordValue) {
+      if (STRIP_ATTRS.has(name) || EVENT_ATTR_RE.test(name) || SVG_PATH_ATTRS.has(name)) {
         node.removeAttribute(attr.name);
         continue;
       }

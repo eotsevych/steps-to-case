@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import type { Action, HierarchyOption, ManualSubStep } from '../types';
-import { NAME_TOKEN } from '../lib/stepName';
+import { NAME_TOKEN, containerText } from '../lib/stepName';
 import { assertionLabels, getStepSummary, getStepTextTemplate, getStepTypeBadge, normalizeStepTemplate } from './stepDisplay';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
@@ -329,9 +329,14 @@ export function DraggableStep({
           </div>
 
           {/* Line 2 (optional): assertion / container / expected results details */}
+          {action.type === 'capture' && (
+            <span data-qa="capture-value" title={action.actionData?.value} className="mt-0.5 block truncate text-xs text-muted-foreground">
+              value: {action.actionData?.value}
+            </span>
+          )}
           {action.containerContext && (
             <span className={`${stepRow.detailLine} text-muted-foreground italic block`}>
-              in &ldquo;{action.containerContext.containerLabel}&rdquo;
+              in &ldquo;{containerText(action.containerContext)}&rdquo;
             </span>
           )}
           {action.type === 'assert' && action.expectedResults?.[0]?.assertion && (

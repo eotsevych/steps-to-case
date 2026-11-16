@@ -5,6 +5,8 @@ import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Check, Container } from 'lucide-react';
+import type { VaultEntry } from '../lib/vault';
+import { containerText } from '../lib/stepName';
 
 interface Props {
   onSave: (result: ExpectedResult) => void;
@@ -16,6 +18,7 @@ interface Props {
   onClearContainer?: () => void;
   initialResult?: ExpectedResult;
   title?: string;
+  vault?: VaultEntry[]; // values of earlier steps the expected value can be taken from
 }
 
 const assertionTypes: { value: AssertionType; label: string }[] = [
@@ -39,10 +42,14 @@ export function ExpectedResultModal({
   onClearContainer,
   initialResult,
   title,
+  vault = [],
 }: Props) {
   const [description, setDescription] = useState(initialResult?.description || '');
   const [assertionType, setAssertionType] = useState<AssertionType>(initialResult?.assertion?.type || 'visible');
   const [expectedValue, setExpectedValue] = useState(initialResult?.assertion?.expectedValue || '');
+  const [valueFrom, setValueFrom] = useState(initialResult?.assertion?.expectedValueFrom);
+  // Linked only while the text still equals the saved value; typing or re-picking unlinks it
+  const linked = vault.find(v => v.actionId === valueFrom && v.value === expectedValue);
 
   useEffect(() => {
     if (pickedElement) {
@@ -81,6 +88,7 @@ export function ExpectedResultModal({
         },
         type: assertionType,
         expectedValue: ['text_equals', 'text_contains'].includes(assertionType) ? expectedValue : undefined,
+        expectedValueFrom: ['text_equals', 'text_contains'].includes(assertionType) ? linked?.actionId : undefined,
       };
     }
 
@@ -120,7 +128,7 @@ export function ExpectedResultModal({
                   <Container className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-foreground">
-                      {pendingContainer.containerLabel}
+                      {containerText(pendingContainer)}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       &lt;{pendingContainer.containerTag}&gt;
@@ -208,6 +216,30 @@ export function ExpectedResultModal({
                     onChange={e => setExpectedValue(e.target.value)}
                     placeholder="Expected text..."
                   />
+                  {vault.length > 0 && (
+                    <div data-qa="vault-values" className="flex flex-wrap gap-1">
+                      {vault.map(v => (
+                        <button
+                          key={v.actionId}
+                          type="button"
+                          data-qa="vault-value"
+                          title={v.value}
+                          onClick={() => { setExpectedValue(v.value); setValueFrom(v.actionId); }}
+                          className={`max-w-full truncate rounded-full border px-2 py-0.5 text-xs ${
+                            linked?.actionId === v.actionId
+                              ? 'border-green-500 bg-secondary text-foreground'
+                              : 'border-border text-muted-foreground hover:text-foreground'}`}
+                        >
+                          {v.name}: {v.value.length > 30 ? `${v.value.slice(0, 30)}…` : v.value}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {linked && (
+                    <p data-qa="vault-linked" className="text-xs text-muted-foreground">
+                      Uses the value saved as &ldquo;{linked.name}&rdquo;. The test reuses it instead of a typed copy.
+                    </p>
+                  )}
                 </div>
               )}
             </>

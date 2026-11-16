@@ -83,15 +83,15 @@ export function useRecorderState() {
   }, []);
 
   const send = useCallback((message: Record<string, unknown>) => {
-    return new Promise<void>((resolve) => {
-      chrome.runtime.sendMessage(message, () => {
+    return new Promise<{ ok?: boolean; error?: string } | undefined>((resolve) => {
+      chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
           // SW was restarting; retry once after a short delay.
           setTimeout(() => {
-            chrome.runtime.sendMessage(message, () => resolve());
+            chrome.runtime.sendMessage(message, (retryResponse) => resolve(retryResponse));
           }, 300);
         } else {
-          resolve();
+          resolve(response);
         }
       });
     });

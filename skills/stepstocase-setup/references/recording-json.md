@@ -44,6 +44,7 @@ Every step has `stepOrder`, `stepType`, `actionKind`, `actionName`.
 | stepType | actionKind | Meaning | Element fields |
 |---|---|---|---|
 | `RECORDED` | `action` | A real user action | `element*` |
+| `CAPTURE` | `action` | Read the element's text and keep it under the name in `saveAs` (StepsToCase 1.1.0+) | `element*` |
 | `ASSERTION_WITH_ELEMENT` | `assertion` | Expected result about an element | `assertElement*` |
 | `ASSERTION_WITHOUT_ELEMENT` | `assertion` | Expected result in words only (`actionName`) | none |
 | `MANUAL` | `action` | A step a person wrote by hand. `actionName` is the whole instruction | none |
@@ -58,9 +59,11 @@ Nesting:
 - `stepOrder` inside `COMBINED` / `SUBGROUP` restarts at 1.
 - Expected results attached to an action are exported as `ASSERTION_WITH_ELEMENT` steps right after it. Their element is usually the same element as the action.
 
-## The action verb is NOT a field
+## The action verb
 
-`actionKind` is only `action` / `assertion` / `comment` / `subgroup`. Get the verb for a `RECORDED` step like this:
+`actionKind` is only `action` / `assertion` / `comment` / `subgroup`. The verb of a `RECORDED` or `CAPTURE` step is in `actionType` (StepsToCase 1.1.0+): `click`, `dblclick`, `fill`, `press`, `select`, `check`, `uncheck`, `navigate`, `capture`, or `step` (a step a person wrote by hand and attached to an element: follow `actionName`). **When `actionType` is present it wins** over `actionName`: a double-click renamed "Open the order" is still `dblclick`.
+
+Recordings from older versions have no `actionType`. Then get the verb like this:
 
 1. From the default `actionName` patterns:
 
@@ -99,7 +102,32 @@ Assertion steps have the same fields with the `assertElement` prefix (`assertEle
 | `pageQuery` | Query string of the page the step ran on, for example `?filename=tryhtml_select` (StepsToCase 1.1.0+). Secret-looking values are masked as `••••••••` |
 | `tab` | The browser tab the step ran in: `2` = the first tab opened during the recording, `3` = the next. Absent = the starting tab (StepsToCase 1.1.0+) |
 | `containerTag` / `containerLabel` / `containerHtml` | The container the user picked for a repeated element (row, card, dialog). `containerHtml` is stripped HTML: no scripts, styles or SVG, attributes cut at 100 characters, at most 2000 characters |
+| `containerIdentity` / `containerIdentityUnique` | Which of the similar containers this is, chosen by the tester (StepsToCase 1.1.0+). See "Container identity" below |
 | `componentTag` | Shared component (`header`, `nav`, ...) from the user's component recognition rules |
+
+## Container identity (`containerIdentity`, StepsToCase 1.1.0+)
+
+Two product cards both have a Buy button. `containerLabel` is the name of the kind of container (`Product card`); `containerIdentity` says which one the tester meant:
+
+```json
+"containerLabel": "Product card",
+"containerIdentity": [{ "source": "h3", "value": "Item 1" }, { "source": "@data-size", "value": "L" }],
+"containerIdentityUnique": true
+```
+
+- Each item is one fact about the container. `source` says where the value is: `text` is the container's own text, `@name` is an attribute of the container, anything else is CSS of an element **inside** the container whose text is the value (`h3`, `span.name`, `[data-testid="title"]`). The CSS is a hint from the recorded page, not a stable locator: prefer a stable attribute of that element from `containerHtml`.
+- Several items: the container matches all of them (name and size).
+- `value` is test data, not part of the locator's name. The same `containerLabel` with other values is the same component with another argument.
+- `containerIdentityUnique`: `true` means the values matched only this container on the page while recording; `false` means other containers matched too; missing means it was not checked (nothing to compare with). It says nothing about the page tomorrow.
+- No `containerIdentity`: the tester chose none (a dialog, a header) or the recording is older. Find the container from `containerLabel` and `containerHtml` as before. Whatever you infer yourself is your guess: do not describe it as the tester's choice.
+- The step's default `actionName` ends with ` in "<containerLabel> (<values>)"`.
+
+## Saved values (`saveAs` / `valueFrom`, StepsToCase 1.1.0+)
+
+- `saveAs` on a `CAPTURE` step: read the element's text **at run time** and keep it under this name. `actionValue` is only the text seen while recording (`Booking #4821`); never hard-code it.
+- `saveAs` on a `RECORDED` fill or select: this input value is used again later. Keep it in one variable or test data field and type it from there.
+- `valueFrom` on an `ASSERTION_WITH_ELEMENT`: the expected text is the value saved under that `saveAs` name. Assert against the variable, not the literal `actionValue` (which is a copy of the recorded value).
+- Names are human labels (`Booking ID`, `Title 2`). Turn them into identifiers in the repo's casing. A `valueFrom` always refers to a `saveAs` earlier in `stepOrder`.
 
 Assertion fields: `assertElementType` is one of `visible`, `hidden`, `enabled`, `disabled`, `checked`, `unchecked`, `text_equals`, `text_contains`. For text assertions the expected text is `actionValue`. `expectedResultsDescription` is the human description.
 

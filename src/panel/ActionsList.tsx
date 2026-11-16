@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Action, HierarchyOption } from '../types';
-import { NAME_TOKEN } from '../lib/stepName';
+import { NAME_TOKEN, containerText } from '../lib/stepName';
 import { assertionLabels, getStepSummary, getStepTextTemplate, getStepTypeBadge, normalizeStepTemplate } from './stepDisplay';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
@@ -140,6 +140,8 @@ export function ActionsList({ actions, onRemoveSubAction, onDeleteAction, onUpda
                   onChange={e => setEditText(e.target.value)}
                   onBlur={() => { if (cancelingEditRef.current) { cancelingEditRef.current = false; return; } saveEdit(); }}
                   onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                  // A capture edits only its name: typing replaces the default
+                  onFocus={e => { if (action.type === 'capture') e.target.select(); }}
                   autoFocus
                   className={stepRow.editInput}
                 />
@@ -153,10 +155,15 @@ export function ActionsList({ actions, onRemoveSubAction, onDeleteAction, onUpda
               </div>
             )}
 
+            {action.type === 'capture' && (
+              <span data-qa="capture-value" title={action.actionData?.value} className="mt-0.5 block truncate text-xs text-muted-foreground">
+                value: {action.actionData?.value}
+              </span>
+            )}
             {/* Container context */}
             {action.containerContext && (
               <span className={`${stepRow.detailLine} text-muted-foreground italic block`}>
-                in &ldquo;{action.containerContext.containerLabel}&rdquo;
+                in &ldquo;{containerText(action.containerContext)}&rdquo;
               </span>
             )}
 
@@ -224,7 +231,7 @@ export function ActionsList({ actions, onRemoveSubAction, onDeleteAction, onUpda
                   variant="ghost"
                   size="icon"
                   onClick={() => startEditing(action)}
-                  title="Edit step text"
+                  title={action.type === 'capture' ? 'Rename saved value' : 'Edit step text'}
                   className="h-5 w-5"
                 >
                   <Pencil className="w-3.5 h-3.5" />

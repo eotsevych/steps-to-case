@@ -14,10 +14,11 @@ export const assertionLabels: Record<AssertionType, string> = {
   unchecked: 'Unchecked',
 };
 
-export function getStepTypeBadge(type: string): { label: string; variant: 'blue' | 'green' | 'amber' } {
+export function getStepTypeBadge(type: string): { label: string; variant: 'blue' | 'green' | 'amber' | 'purple' } {
   switch (type) {
     case 'assert': return { label: 'A', variant: 'green' };
     case 'step': return { label: 'M', variant: 'amber' };
+    case 'capture': return { label: 'S', variant: 'purple' };
     default: return { label: 'R', variant: 'blue' };
   }
 }
@@ -42,6 +43,8 @@ export interface StepSummaryParts {
  * to expose (tokenless custom text, press, navigate, assert, manual step).
  */
 export function getStepSummaryParts(action: Action): StepSummaryParts | null {
+  // A capture shows its name as the chip: the picker offers the texts around the element as names
+  if (action.type === 'capture') return { prefix: 'Save var', name: action.actionData?.captureName ?? '', suffix: '' };
   if (action.customText) {
     const idx = action.customText.indexOf(NAME_TOKEN);
     if (idx === -1) return null;
@@ -84,6 +87,7 @@ function getNameParts(action: Action): StepSummaryParts | null {
     case 'navigate':
     case 'assert':
     case 'step':
+    case 'capture':
       return null;
     default:
       return { prefix: `${action.type} on`, name: short, suffix: '' };
@@ -104,6 +108,8 @@ function isNameDriven(action: Action): boolean {
  * edit.
  */
 export function getStepTextTemplate(action: Action): string {
+  // A capture step has one thing to edit: the name its value is saved under
+  if (action.type === 'capture') return action.actionData?.captureName ?? '';
   if (action.customText) return action.customText;
   if (!isNameDriven(action)) return getStepSummary(action);
   const parts = getNameParts(action)!;
@@ -152,6 +158,8 @@ export function getStepSummary(action: Action): string {
       return getAssertionSummary(action);
     case 'step':
       return short;
+    case 'capture':
+      return `Save var "${action.actionData?.captureName ?? ''}"`; // the value is the row's second line
     default:
       return `${action.type} on ${short}`;
   }

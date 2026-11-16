@@ -1,0 +1,17 @@
+{
+  "name": "roomdesk-e2e",
+  "private": true,
+  "description": "Playwright end-to-end tests for the RoomDesk demo app (docs/demo)",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}
