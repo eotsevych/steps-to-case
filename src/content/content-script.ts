@@ -19,6 +19,7 @@ import {
   setSelectorDebugMode,
 } from '../injected/selectorGenerator';
 import { stripContainerHtml } from '../injected/containerHtml';
+import { isSecretInput, watchSecretInputs } from '../injected/secretInputs';
 import {
   DEFAULT_SETTINGS,
   type PageRecognitionRule,
@@ -1106,7 +1107,7 @@ function handleInput(event: Event) {
 
   lastInputElement = target;
   // Never let a password leave the page: mask it before it is stored or shown
-  const isPassword = tag === 'input' && (target as HTMLInputElement).type === 'password';
+  const isPassword = isSecretInput(target);
   lastInputValue = isPassword ? PASSWORD_MASK : (target.value ?? (target as HTMLElement).innerText ?? '');
 
   if (fillDebounceTimer) clearTimeout(fillDebounceTimer);
@@ -1176,6 +1177,7 @@ function handleMouseOver(event: MouseEvent) {
 function startRecording() {
   if (isRecording) return;
   isRecording = true;
+  watchSecretInputs();
   document.addEventListener('mousedown', handleMouseDown, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('dblclick', handleDblClick, true);
