@@ -911,6 +911,7 @@ function handleMouseDown(event: MouseEvent) {
 
   const customSelectOption = detectCustomSelectOption(target, target);
   if (!customSelectOption) return;
+  flushPendingFill();
 
   lastOptionMouseDownTs = Date.now();
   lastOptionMouseDownEl = target;
