@@ -1,6 +1,6 @@
 # Changelog · Історія змін
 
-## 1.1.0 — release candidate · кандидат на реліз
+## 1.1.0 — November 2026 · листопад 2026
 
 ### English
 
