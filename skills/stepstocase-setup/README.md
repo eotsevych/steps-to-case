@@ -9,6 +9,8 @@ You get two commands:
 | `/stepstocase-setup` | Once per test repository | Studies your framework, asks a few questions, and writes the `/generate-autotest` command for your project |
 | `/generate-autotest <recording.json>` | For every recording | Writes the page objects and the test for that recording, in your project's style |
 
+![From one manual run to a test in your framework](https://raw.githubusercontent.com/eotsevych/steps-to-case/main/docs/media/stepstocase-demo.gif)
+
 ## Before you start
 
 - **A test-automation repository** in any language and framework: Playwright (JS/TS, Java, Python, .NET), Cypress, Selenium, Selenide, Serenity BDD, WebdriverIO, Cucumber, and others.

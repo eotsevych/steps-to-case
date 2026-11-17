@@ -34,6 +34,8 @@ Each step is covered in detail, with short videos, in the **[documentation](http
 
 [`skills/stepstocase-setup`](skills/stepstocase-setup) is an agent skill that builds a test generator for your project. It works in Claude Code, Cursor, GitHub Copilot, Codex, Gemini CLI and any other agent that supports [Agent Skills](https://agentskills.io). It scans your test framework (Playwright, Cypress, Selenium, WebdriverIO, Selenide, BDD; any language), asks only the questions the scan cannot answer, and writes a `/generate-autotest` command that follows your conventions, installed for every agent your team uses.
 
+![From one manual run to a test in your framework](docs/media/stepstocase-demo.gif)
+
 Install it in your test repo. The installer asks which agents to install for:
 
 ```bash
