@@ -62,9 +62,11 @@ function firstCssSelectorCandidate(action: Action): string {
 
 export function getAllContainerHighlightSelectors(action: Action): string[] {
   const list: string[] = [];
+  // Every selector is relative to the element's shadow root, if it is in one (see queryScoped)
+  const scope = action.selectors?.shadowHost ? `${action.selectors.shadowHost} >>> ` : '';
   const add = (sel: string) => {
     const trimmed = sel.trim();
-    if (trimmed && !list.includes(trimmed)) list.push(trimmed);
+    if (trimmed && !list.includes(scope + trimmed)) list.push(scope + trimmed);
   };
 
   const id = getAttr(action, 'id');

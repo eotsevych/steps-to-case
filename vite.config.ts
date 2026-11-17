@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -31,5 +32,9 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
     },
+  },
+  // Unit tests only; examples/ holds Playwright suites with their own runner
+  test: {
+    include: ['src/**/*.test.ts'],
   },
 });

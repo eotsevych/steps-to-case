@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find a room · RoomDesk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- StepsToCase demo app. Serve over http (not file://): python3 -m http.server -d docs 8000, open /demo/rooms.html -->
+  <header class="topbar">
+    <a class="brand" href="rooms.html">RoomDesk</a>
+    <nav aria-label="Main">
+      <a href="rooms.html" aria-current="page">Rooms</a>
+      <a href="#">My bookings</a>
+    </nav>
+    <span class="user">Signed in as Alex Kim</span>
+  </header>
+
+  <main>
+    <h1>Find a meeting room</h1>
+    <form id="search-form" class="panel filters" aria-label="Room search">
+      <label class="field">Office
+        <select id="office" name="office">
+          <option value="">Any office</option>
+          <option value="berlin">Berlin</option>
+          <option value="lisbon">Lisbon</option>
+        </select>
+      </label>
+      <label class="field">Day
+        <select id="day" name="day">
+          <option>Today</option>
+          <option>Tomorrow</option>
+          <option>Friday</option>
+        </select>
+      </label>
+      <label class="field">People
+        <select id="capacity" name="capacity">
+          <option value="1">Any size</option>
+          <option value="4">4 or more</option>
+          <option value="8">8 or more</option>
+        </select>
+      </label>
+      <button type="submit" class="btn primary" data-testid="search-rooms">Search</button>
+    </form>
+
+    <p id="status" class="muted" role="status">Pick an office and search for free rooms.</p>
+    <ul id="results" class="cards" aria-label="Available rooms"></ul>
+  </main>
+
+  <script>
+    const form = document.getElementById('search-form');
+    const results = document.getElementById('results');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const office = form.office.value;
+      const minSeats = Number(form.capacity.value);
+      const day = form.day.value;
+      status.textContent = 'Searching…';
+      results.innerHTML = '';
+
+      const rooms = await fetch('api/rooms.json').then((r) => r.json());
+      const found = rooms.filter((r) => (!office || r.office === office) && r.seats >= minSeats);
+
+      status.textContent = found.length ? `${found.length} rooms free ${day.toLowerCase()}` : 'No free rooms. Try another office or size.';
+      results.innerHTML = found.map((r) => `
+        <li class="card" data-room="${r.id}">
+          <h2>${r.name}</h2>
+          <span class="muted">${r.office[0].toUpperCase() + r.office.slice(1)} · ${r.floor}</span>
+          <span>${r.seats} seats</span>
+          <div>${r.features.map((f) => `<span class="tag">${f}</span>`).join('')}</div>
+          <a class="btn" href="book.html?room=${r.id}&day=${encodeURIComponent(day)}">Book</a>
+        </li>`).join('');
+    });
+  </script>
+</body>
+</html>

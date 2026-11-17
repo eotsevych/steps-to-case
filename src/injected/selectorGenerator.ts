@@ -56,7 +56,7 @@ function isDynamic(value: string): boolean {
   return GUID_PATTERN.test(value) || HEX_HEAVY_PATTERN.test(value) || DYNAMIC_ID_PATTERN.test(value);
 }
 
-function isUtilityClass(cls: string): boolean {
+export function isUtilityClass(cls: string): boolean {
   return UTILITY_CLASS_PATTERN.test(cls) || cls.startsWith('_') || cls.startsWith('ng-') || isDynamic(cls);
 }
 
@@ -82,14 +82,23 @@ function isVisible(el: Element): boolean {
 }
 
 // ============================================================
-// Uniqueness check — only counts visible elements
+// Uniqueness check — only counts visible elements, in the target's own tree
 // ============================================================
 
-// Memo for one generateSelectors() call: ranking re-tests the same selectors,
-// and each test scans the whole document. Reset per call because the DOM changes.
-let uniqueMemo = new Map<string, boolean>();
+/** The tree an element lives in: the document or an open shadow root. Selectors and ids only mean something inside it. */
+export function rootOf(el: Element): Document | ShadowRoot {
+  const root = el.getRootNode();
+  return root instanceof ShadowRoot || root instanceof Document ? root : document;
+}
 
-function memoized(key: string, compute: () => boolean): boolean {
+// Set per generateSelectors() call: the tree of the element being described.
+let queryRoot: Document | ShadowRoot = document;
+
+// Memo for one generateSelectors() call: ranking re-tests the same selectors,
+// and each test scans the whole tree. Reset per call because the DOM changes.
+let uniqueMemo = new Map<string, Element | null>();
+
+function memoized(key: string, compute: () => Element | null): Element | null {
   const cached = uniqueMemo.get(key);
   if (cached !== undefined) return cached;
   const result = compute();
@@ -97,22 +106,43 @@ function memoized(key: string, compute: () => boolean): boolean {
   return result;
 }
 
-function isUnique(selector: string): boolean {
+/** The only visible element that passes `test`; null when there is none or more than one. */
+function soleVisible(elements: ArrayLike<Element>, test?: (el: Element) => boolean): Element | null {
+  let sole: Element | null = null;
+  for (const el of Array.from(elements)) {
+    if (!isVisible(el) || (test && !test(el))) continue;
+    if (sole) return null;
+    sole = el;
+  }
+  return sole;
+}
+
+/** True when `selector` matches one visible element and that element is `el`: one match somewhere else is not enough. */
+function isUnique(selector: string, el: Element): boolean {
   return memoized(selector, () => {
     try {
-      const matches = document.querySelectorAll(selector);
-      let visibleCount = 0;
-      for (const m of Array.from(matches)) {
-        if (isVisible(m)) {
-          visibleCount++;
-          if (visibleCount > 1) return false;
-        }
-      }
-      return visibleCount === 1;
+      return soleVisible(queryRoot.querySelectorAll(selector));
     } catch {
-      return false;
+      return null;
     }
-  });
+  }) === el;
+}
+
+const SHADOW_SEPARATOR = ' >>> ';
+
+/**
+ * querySelectorAll for selectors that may start with shadow hosts:
+ * "user-card >>> button.save" looks for the button inside the open shadow root of user-card.
+ */
+export function queryScoped(selector: string): Element[] {
+  const parts = selector.split(SHADOW_SEPARATOR);
+  let root: Document | ShadowRoot = document;
+  for (const host of parts.slice(0, -1)) {
+    const shadow: ShadowRoot | null | undefined = root.querySelector(host)?.shadowRoot;
+    if (!shadow) return [];
+    root = shadow;
+  }
+  return Array.from(root.querySelectorAll(parts[parts.length - 1]));
 }
 
 /** Only button-like inputs carry a label in their value; other inputs' value is user data. */
@@ -155,7 +185,7 @@ function getImplicitRole(el: Element): string | null {
 export function getAccessibleName(el: Element): string {
   const labelledBy = el.getAttribute('aria-labelledby');
   if (labelledBy) {
-    const labels = labelledBy.split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim()).filter(Boolean);
+    const labels = labelledBy.split(/\s+/).map(id => rootOf(el).getElementById(id)?.textContent?.trim()).filter(Boolean);
     if (labels.length) return labels.join(' ');
   }
 
@@ -511,9 +541,9 @@ function addSiblingCandidates(
     const tildeSimple = `${anchor} ~ ${tag}`;
     const tildeSpecific = `${anchor} ~ ${elSpec}`;
 
-    if (isUnique(tildeSpecific)) {
+    if (isUnique(tildeSpecific, el)) {
       results.push({ type: 'sibling', value: tildeSpecific, cssSelector: tildeSpecific, baseScore: ancestorScore(1), level: 1 });
-    } else if (isUnique(tildeSimple)) {
+    } else if (isUnique(tildeSimple, el)) {
       results.push({ type: 'sibling', value: tildeSimple, cssSelector: tildeSimple, baseScore: ancestorScore(1), level: 1 });
     }
 
@@ -538,19 +568,19 @@ function addAncestorCandidates(
     const descSpecific = `${ancAnchor} ${elSpec}`;
 
     if (level === 2) {
-      if (isUnique(`${ancAnchor} > ${elSpec}`)) {
+      if (isUnique(`${ancAnchor} > ${elSpec}`, el)) {
         results.push({ type: 'parent-scoped', value: `${ancAnchor} > ${elSpec}`, cssSelector: `${ancAnchor} > ${elSpec}`, baseScore: score, level });
-      } else if (isUnique(`${ancAnchor} > ${tag}`)) {
+      } else if (isUnique(`${ancAnchor} > ${tag}`, el)) {
         results.push({ type: 'parent-scoped', value: `${ancAnchor} > ${tag}`, cssSelector: `${ancAnchor} > ${tag}`, baseScore: score, level });
-      } else if (isUnique(descSpecific)) {
+      } else if (isUnique(descSpecific, el)) {
         results.push({ type: 'parent-scoped', value: descSpecific, cssSelector: descSpecific, baseScore: score + PENALTIES.deep_chain, level });
-      } else if (isUnique(descSimple)) {
+      } else if (isUnique(descSimple, el)) {
         results.push({ type: 'parent-scoped', value: descSimple, cssSelector: descSimple, baseScore: score + PENALTIES.deep_chain, level });
       }
     } else {
-      if (isUnique(descSpecific)) {
+      if (isUnique(descSpecific, el)) {
         results.push({ type: 'parent-scoped', value: descSpecific, cssSelector: descSpecific, baseScore: score, level });
-      } else if (isUnique(descSimple)) {
+      } else if (isUnique(descSimple, el)) {
         results.push({ type: 'parent-scoped', value: descSimple, cssSelector: descSimple, baseScore: score + PENALTIES.deep_chain, level });
       }
     }
@@ -571,11 +601,11 @@ function addAncestorCandidates(
     const css2 = `${anchor} ~ ${currentAncestor.tagName.toLowerCase()} > ${elSpec}`;
     const css3 = `${anchor} ~ ${currentAncestor.tagName.toLowerCase()} ${tag}`;
 
-    if (isUnique(css2)) {
+    if (isUnique(css2, el)) {
       results.push({ type: 'parent-scoped', value: css2, cssSelector: css2, baseScore: score, level });
-    } else if (isUnique(css1)) {
+    } else if (isUnique(css1, el)) {
       results.push({ type: 'parent-scoped', value: css1, cssSelector: css1, baseScore: score, level });
-    } else if (isUnique(css3)) {
+    } else if (isUnique(css3, el)) {
       results.push({ type: 'parent-scoped', value: css3, cssSelector: css3, baseScore: score + PENALTIES.deep_chain, level });
     }
   }
@@ -677,14 +707,14 @@ function getMeaningfulAnchorSelector(el: Element): string | null {
   const semClass = Array.from(el.classList).find(c => !isUtilityClass(c) && !isDynamic(c));
   if (semClass) {
     const sel = `${tag}.${CSS.escape(semClass)}`;
-    if (isUnique(sel)) return sel;
+    if (isUnique(sel, el)) return sel;
   }
 
   // Meaningful data-* attribute
   for (const attr of Array.from(el.attributes)) {
     if (attr.name.startsWith('data-') && attr.value && !isDynamic(attr.value) && attr.value.length < 40) {
       const sel = `${tag}[${attr.name}="${CSS.escape(attr.value)}"]`;
-      if (isUnique(sel)) return sel;
+      if (isUnique(sel, el)) return sel;
     }
   }
 
@@ -792,7 +822,7 @@ function buildRoleCss(el: Element, role: string, accName: string): string {
   // 3. For labeled form elements — use element ID
   if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
     if (el.id) {
-      const label = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      const label = rootOf(el).querySelector(`label[for="${CSS.escape(el.id)}"]`);
       if (label) return `#${CSS.escape(el.id)}`;
     }
   }
@@ -819,7 +849,7 @@ export function getAssociatedLabelText(el: Element): string | null {
     return null;
 
   if (el.id) {
-    const label = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+    const label = rootOf(el).querySelector(`label[for="${CSS.escape(el.id)}"]`);
     if (label?.textContent) return label.textContent.trim();
   }
 
@@ -851,7 +881,7 @@ function scoreCandidates(candidates: Candidate[], el: Element): SelectorOption[]
       if (!unique) score += PENALTIES.not_unique;
     } else if (c.cssSelector) {
       // Broken (0 matches) and ambiguous (2+) selectors are equally disqualified
-      if (!isUnique(c.cssSelector)) {
+      if (!isUnique(c.cssSelector, el)) {
         score += PENALTIES.not_unique;
       }
     }
@@ -895,18 +925,21 @@ function scoreCandidates(candidates: Candidate[], el: Element): SelectorOption[]
 
 function isTextUnique(el: Element, text: string): boolean {
   const tag = el.tagName.toLowerCase();
-  return memoized(`text\u0000${tag}\u0000${text}`, () => {
-    // Check all visible same-tag elements for matching text
-    let count = 0;
-    for (const c of Array.from(document.querySelectorAll(tag))) {
-      if (!isVisible(c)) continue;
-      if ((c as HTMLElement).innerText?.trim() === text) {
-        count++;
-        if (count > 1) return false;
-      }
-    }
-    return count === 1;
-  });
+  // Same-tag visible elements with the same text: the only one must be el itself
+  return memoized(`text\u0000${tag}\u0000${text}`, () =>
+    soleVisible(queryRoot.querySelectorAll(tag), c => (c as HTMLElement).innerText?.trim() === text)) === el;
+}
+
+/** CSS of the open shadow hosts around `root`, outermost first ("app-shell >>> user-card"); undefined in the document. */
+function shadowHostChain(root: Document | ShadowRoot): string | undefined {
+  if (!(root instanceof ShadowRoot)) return undefined;
+  const host = root.host;
+  queryRoot = rootOf(host);
+  uniqueMemo = new Map();
+  const css = [getMeaningfulAnchorSelector(host), host.tagName.toLowerCase()].find(sel => sel && isUnique(sel, host))
+    ?? buildRecursiveCss(host, 3);
+  const outer = shadowHostChain(queryRoot);
+  return outer ? `${outer}${SHADOW_SEPARATOR}${css}` : css;
 }
 
 // ============================================================
@@ -967,6 +1000,7 @@ function logCandidatesByLevel(el: Element, candidates: Candidate[], scored: Sele
 
 export function generateSelectors(el: Element): Selectors {
   uniqueMemo = new Map();
+  const root = queryRoot = rootOf(el);
   // Phase 1: Check the element itself
   const self = selfCandidates(el);
 
@@ -976,7 +1010,7 @@ export function generateSelectors(el: Element): Selectors {
   const strongSelf = self.find(c => {
     if (c.baseScore > strongThreshold) return false;
     if (c.type === 'text') return isTextUnique(el, c.value);
-    return c.cssSelector ? isUnique(c.cssSelector) : false;
+    return c.cssSelector ? isUnique(c.cssSelector, el) : false;
   });
 
   let allCandidates: Candidate[];
@@ -1023,6 +1057,9 @@ export function generateSelectors(el: Element): Selectors {
     logCandidatesByLevel(el, allCandidates, scored, primary.value);
   }
 
+  // The selectors only work inside the target's own tree: keep the way into it
+  const shadowHost = shadowHostChain(root);
+
   // contextText is set by Algorithm 1 (findDescription) in the content script.
-  return { primary, alternatives };
+  return { primary, alternatives, ...(shadowHost ? { shadowHost } : {}) };
 }

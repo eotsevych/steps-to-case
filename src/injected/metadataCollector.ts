@@ -9,6 +9,7 @@ import {
   getCustomSelectorAttrs,
   getPreviousSiblings,
   getSelectorDebugMode,
+  rootOf,
 } from './selectorGenerator';
 import { isSecretInput } from './secretInputs';
 
@@ -88,7 +89,7 @@ function getAssociatedLabel(el: Element): Element | null {
   if (tag !== 'input' && tag !== 'select' && tag !== 'textarea') return null;
   if (el.id) {
     try {
-      const forLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      const forLabel = rootOf(el).querySelector(`label[for="${CSS.escape(el.id)}"]`);
       if (forLabel) return forLabel;
     } catch { /* invalid id for selector */ }
   }

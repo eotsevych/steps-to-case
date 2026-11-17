@@ -35,7 +35,7 @@ export interface StepPage {
   order: number;
 }
 
-export type ActionType = 'click' | 'fill' | 'press' | 'navigate' | 'select' | 'check' | 'uncheck' | 'dblclick' | 'assert' | 'step';
+export type ActionType = 'click' | 'fill' | 'press' | 'navigate' | 'select' | 'check' | 'uncheck' | 'dblclick' | 'assert' | 'step' | 'capture';
 
 export interface ElementInfo {
   tagName: string;
@@ -56,6 +56,9 @@ export interface PageContext {
   pathname: string;
   pageTag?: string; // Design/layout tag matched by page recognition rules
   frameUrl?: string; // Set when the step happened inside an iframe; selectors are relative to that frame
+  frameId?: string;   // id of that <iframe> element (same-origin frames only)
+  frameName?: string; // name of that <iframe> element
+  query?: string;     // the page URL's query string ("?tab=2"); url drops it so visits group into one page
 }
 
 export type SelectorType = 'testid' | 'role' | 'label' | 'placeholder' | 'text' | 'css' | 'id' | 'name' | 'aria' | 'href' | 'alt' | 'title' | 'data-attr' | 'sibling' | 'parent-scoped';
@@ -69,6 +72,7 @@ export interface SelectorOption {
 export interface Selectors {
   primary: SelectorOption;
   alternatives: SelectorOption[];
+  shadowHost?: string; // the element is in an open shadow root: CSS of its hosts, outermost first, joined with " >>> "
   contextText?: string; // Best descriptive text found during hierarchy analysis
   descriptionHierarchy?: HierarchyOption;
   descriptionSource?: string;
@@ -103,6 +107,7 @@ export interface ActionData {
     url: string;
     title?: string;
   };
+  captureName?: string; // 'capture' steps: the name the text is saved under (the text is in value)
 }
 
 export type AssertionType =
@@ -125,13 +130,29 @@ export interface ExpectedResult {
     };
     type: AssertionType;
     expectedValue?: string;
+    expectedValueFrom?: string; // id of the earlier step expectedValue was taken from (see lib/vault.ts)
   };
+}
+
+/** One fact that tells a container from its look-alikes (the other rows, cards). */
+export interface ContainerIdentityField {
+  // Where the value is: "text" (the container's own text), "@attr" (its attribute),
+  // else CSS of the element inside the container that holds the text ("h3", "span.name")
+  source: string;
+  value: string; // the value seen while recording ("Item 1")
+}
+
+/** A field offered to the tester; sharedWith lists the look-alike containers (by index) that have the same value. */
+export interface ContainerIdentityCandidate extends ContainerIdentityField {
+  sharedWith: number[];
 }
 
 export interface ContainerContext {
   containerTag: string;    // e.g. "section", "dialog", "div"
-  containerLabel: string;  // best label: aria-label, heading text, data-title, etc.
+  containerLabel: string;  // the reusable name of this kind of container: "Product card", "Confirm dialog"
   containerHtml?: string;  // stripped outerHTML of the container for LLM locator generation
+  identity?: ContainerIdentityField[]; // chosen by the tester: which instance this is; several fields = all must match
+  identityUnique?: boolean; // whether identity singled the container out on the page while recording; undefined = not checked
 }
 
 export interface Action {
@@ -149,6 +170,7 @@ export interface Action {
   subStepName?: string; // Custom label for nested sub-actions
   containerContext?: ContainerContext;
   componentTag?: string; // Component tag matched by component recognition rules (e.g. "header", "nav")
+  tab?: number; // Browser tab the step ran in: 2 = the first tab opened during recording, ...; unset = the starting tab
 }
 
 // A precondition for the test — named requirement that must be true before the test starts
@@ -199,7 +221,7 @@ export interface LocatorAttr {
 // Message types for extension communication
 // ============================================================
 
-export type RecordingPhase = 'idle' | 'metadata' | 'recording' | 'review' | 'exporting';
+export type RecordingPhase = 'idle' | 'recording' | 'review';
 
 export interface RecordingState {
   phase: RecordingPhase;
@@ -215,6 +237,7 @@ export interface RecordingState {
   baseUrl?: string;
   isElementPickerActive: boolean;
   pendingContainer?: ContainerContext; // set before an action to pre-assign container
+  tabIds?: number[]; // Chrome tab ids in the order the recording first used them; Action.tab is the index + 1
 }
 
 // Messages: Content Script <-> Background
@@ -235,7 +258,7 @@ export type BackgroundMessage =
   | { type: 'ELEMENT_PICKER_START'; tabId?: number; pageUrl?: string }
   | { type: 'ELEMENT_PICKER_STOP'; tabId?: number }
   | { type: 'PICKER_NAV'; direction: 'up' | 'down'; tabId?: number }
-  | { type: 'ELEMENT_PICKED'; elementInfo: ElementInfo; selectors: Selectors; containerHtml?: string }
+  | { type: 'ELEMENT_PICKED'; elementInfo: ElementInfo; selectors: Selectors; containerHtml?: string; identityCandidates?: ContainerIdentityCandidate[]; similarContainers?: number }
   | { type: 'PICK_CANCELLED' }
   | { type: 'ATTACH_REQUESTS'; actionId: string; requests: TriggeredRequest[] }
   | { type: 'RESET_RECORDING' }
@@ -254,6 +277,7 @@ export type BackgroundMessage =
   | { type: 'HIGHLIGHT_AND_PICK_CONTAINER'; actionId: string; selector: string; candidateSelectors?: string[]; targetText?: string; tabId?: number }
   | { type: 'PICK_CONTAINER_PRE'; tabId?: number; pageUrl?: string }
   | { type: 'SET_PENDING_CONTAINER'; containerContext: ContainerContext }
+  | { type: 'SET_ACTION_CONTAINER'; actionId: string; containerContext: ContainerContext }
   | { type: 'CLEAR_PENDING_CONTAINER' };
 
 // ============================================================
@@ -263,6 +287,7 @@ export type BackgroundMessage =
 
 export type ExportStepType =
   | 'RECORDED'
+  | 'CAPTURE'
   | 'MANUAL'
   | 'MANUAL_WITHOUT_ELEMENT'
   | 'ASSERTION_WITH_ELEMENT'
@@ -276,13 +301,15 @@ export type ExportAssertionType =
   | 'visible' | 'hidden' | 'enabled' | 'disabled'
   | 'checked' | 'unchecked' | 'text_equals' | 'text_contains';
 
-// Leaf step with element info (RECORDED)
+// Leaf step with element info (RECORDED, or CAPTURE: read the element's text into saveAs)
 export interface ExportActionStep {
   stepOrder: number;
-  stepType: 'RECORDED';
+  stepType: 'RECORDED' | 'CAPTURE';
   actionKind: 'action';
+  actionType: ActionType; // what the user did; wins over guessing from actionName, which can be renamed
   actionName: string;
   actionValue: string;
+  saveAs?: string; // later assertions use this value through valueFrom
   triggeredNavigationUrl: string;
   triggeredNavigationTitle: string;
   triggeredRequests?: Array<{ url: string; method: string; status?: number }>;
@@ -297,9 +324,15 @@ export interface ExportActionStep {
   elementAttributes: Record<string, string>;
   selectorContextText: string;
   frameUrl?: string; // iframe the element lives in
+  frameId?: string;
+  frameName?: string;
+  pageQuery?: string; // query string of the page the step ran on, secrets masked
+  tab?: number; // 2+ = a tab opened during the recording; absent = the starting tab
   containerTag?: string;
   containerLabel?: string;
   containerHtml?: string;
+  containerIdentity?: ContainerIdentityField[]; // the tester's choice of what tells this container from similar ones
+  containerIdentityUnique?: boolean; // false: the choice matched other containers too while recording
   componentTag?: string; // Component tag matched by component recognition rules
 }
 
@@ -318,6 +351,7 @@ export interface ExportAssertionStep {
   actionKind: 'assertion';
   actionName: string;
   actionValue: string;
+  valueFrom?: string; // actionValue is the value saved by the step with this saveAs
   expectedResultsDescription: string;
   assertElementType: ExportAssertionType;
   assertElementTag: string;
@@ -331,9 +365,15 @@ export interface ExportAssertionStep {
   assertElementAttributes: Record<string, string>;
   assertSelectorContextText: string;
   frameUrl?: string; // iframe the element lives in
+  frameId?: string;
+  frameName?: string;
+  pageQuery?: string; // query string of the page the step ran on, secrets masked
+  tab?: number; // 2+ = a tab opened during the recording; absent = the starting tab
   containerTag?: string;
   containerLabel?: string;
   containerHtml?: string;
+  containerIdentity?: ContainerIdentityField[]; // the tester's choice of what tells this container from similar ones
+  containerIdentityUnique?: boolean; // false: the choice matched other containers too while recording
   componentTag?: string; // Component tag matched by component recognition rules
 }
 
@@ -373,6 +413,7 @@ export interface ExportPage {
   pageName: string;
   pageUrl: string;
   pageTitle: string;
+  pageDomain?: string; // host of the page; pageUrl is a path on it
   pageTag?: string; // Design/layout tag from page recognition rules
   steps: ExportStep[];
 }
@@ -380,7 +421,7 @@ export interface ExportPage {
 export interface ExportRecording {
   testName: string;
   baseUrl?: string; // origin of the tested site; startUrl and pageUrl are paths on it
-  startUrl: string;
+  startUrl: string; // path + query on baseUrl, secrets masked
   preconditions?: string[];
   pages: ExportPage[];
 }
@@ -397,4 +438,6 @@ export interface ExportSingleStep {
   containerTag: string;
   containerLabel: string;
   containerHtml: string;
+  containerIdentity?: ContainerIdentityField[];
+  containerIdentityUnique?: boolean;
 }

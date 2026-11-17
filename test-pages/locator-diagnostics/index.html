@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Locator diagnostics — check the use case</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; color: #202020; background: #fafafa; max-width: 860px; margin: 36px auto; padding: 0 20px; }
+    h1 { font-size: 27px; line-height: 1.2; }
+    h2 { font-size: 20px; }
+    section { background: white; border: 1px solid #ccc; padding: 20px; margin: 20px 0; }
+    button { font: inherit; padding: 6px 12px; cursor: pointer; }
+    button:disabled { cursor: default; }
+    #customers > div { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #ddd; }
+    #customers > div:last-child { border-bottom: 0; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f0f0f0; padding: 12px; }
+    .note { font-size: 14px; color: #555; }
+    #resolution { font-weight: 650; }
+    #resolution[data-result="wrong"] { color: #a12121; }
+    #resolution[data-result="correct"] { color: #20602f; }
+    td, th { text-align: left; vertical-align: top; padding: 7px 12px 7px 0; border-bottom: 1px solid #ddd; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    code { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h1>A unique locator can still depend on row order</h1>
+  <p>The recorder already penalizes duplicate candidates. This experiment asks what happens when its best remaining candidate uses the customer’s position.</p>
+  <ol>
+    <li>Click <strong>Edit beside Ben</strong>. This captures a locator with the current recorder algorithm.</li>
+    <li>Click <strong>Move Ben to top</strong>, then <strong>Check captured locator</strong>.</li>
+    <li>Click <strong>Reset</strong>, then <strong>Use stable attributes</strong>. Repeat the same steps.</li>
+  </ol>
+  <p class="note">This is a test fixture, not an implemented diagnostics feature. Run it through <code>node scripts/serve-locator-use-case.mjs</code>. The fixture bundles the real selector generator with default settings. Your extension’s custom settings can produce different candidates.</p>
+
+  <section aria-labelledby="customers-title">
+    <h2 id="customers-title">Application under test</h2>
+    <p id="mode">All Edit buttons have the same data-testid="edit".</p>
+    <!-- Row nodes deliberately have no unique IDs, classes, data attributes or ARIA labels. -->
+    <div id="customers"></div>
+    <p id="application-result" aria-live="polite">No customer opened yet.</p>
+  </section>
+
+  <section aria-labelledby="experiment-title">
+    <h2 id="experiment-title">Locator experiment</h2>
+    <div class="controls">
+      <button id="move">Move Ben to top</button>
+      <button id="check" disabled>Check captured locator</button>
+      <button id="stable">Use stable attributes</button>
+      <button id="reset">Reset</button>
+    </div>
+    <p id="captured-name">Click Edit beside Ben to capture a locator.</p>
+    <pre id="captured-selector">No locator captured.</pre>
+    <p id="resolution" aria-live="polite">No check performed.</p>
+    <table>
+      <thead><tr><th>Candidate</th><th>Score</th><th>Meaning in this fixture</th></tr></thead>
+      <tbody id="candidates"></tbody>
+    </table>
+    <p id="diagnostic" class="note">The proposed diagnostic would explain the selected candidate’s dependence on position. No warning is needed merely because a rejected alternative had duplicates.</p>
+    <p class="note">The check evaluates a captured CSS candidate directly. It is not a replay of exported JSON: exports omit the ranked candidate set, and generated automation can choose a different locator from element and container metadata. This experiment does not prove that a generated test will fail.</p>
+  </section>
+
+  <script src="/recorder-selectors.js"></script>
+  <script>
+    const customers = document.querySelector('#customers');
+    const rows = new Map();
+    let captured = null;
+    let stableAttributes = false;
+
+    function resolveCaptured() {
+      const output = document.querySelector('#resolution');
+      if (!captured) return;
+      if (!['css', 'testid', 'id', 'name', 'aria', 'href', 'alt', 'title', 'data-attr', 'sibling', 'parent-scoped'].includes(captured.primary.type)) {
+        output.textContent = 'This candidate is semantic. The fixture does not evaluate it as CSS.';
+        delete output.dataset.result;
+        return;
+      }
+      let matches;
+      try { matches = [...document.querySelectorAll(captured.primary.value)]; }
+      catch { output.textContent = 'The candidate is not valid CSS; no resolution claim is made.'; return; }
+      const matchingCustomers = matches.map(el => [...rows].find(([, row]) => row.button === el)?.[0] || 'another element');
+      const correct = matches.length === 1 && matches[0] === rows.get(captured.name).button;
+      output.dataset.result = correct ? 'correct' : 'wrong';
+      output.textContent = `${matches.length} match(es): ${matchingCustomers.join(', ') || 'none'}. ${correct ? `Still identifies ${captured.name}.` : `Does not uniquely identify ${captured.name}.`}`;
+    }
+
+    function capture(name, button) {
+      if (!window.LocatorEngine) {
+        document.querySelector('#captured-selector').textContent = 'Start the local server; the source-module bundle is missing.';
+        return;
+      }
+      const selectors = LocatorEngine.generateSelectors(button);
+      captured = { name, primary: selectors.primary };
+      document.querySelector('#captured-name').textContent = `Captured the Edit button for ${name}.`;
+      document.querySelector('#captured-selector').textContent = `${selectors.primary.value}\nType: ${selectors.primary.type}; score: ${selectors.primary.score} (lower is preferred).`;
+      const tbody = document.querySelector('#candidates');
+      tbody.replaceChildren();
+      for (const candidate of [selectors.primary, ...selectors.alternatives]) {
+        const tr = document.createElement('tr');
+        const positional = /:nth-(child|of-type)\(/.test(candidate.value);
+        const explanation = candidate.score >= 1000 ? 'Rejected by the existing penalty.' : positional ? 'Eligible, but depends on position.' : 'Eligible candidate; check its matching semantics.';
+        for (const text of [candidate.value, String(candidate.score), explanation]) {
+          const td = document.createElement('td');
+          td.textContent = text;
+          tr.append(td);
+        }
+        tbody.append(tr);
+      }
+      document.querySelector('#diagnostic').textContent = /:nth-(child|of-type)\(/.test(selectors.primary.value)
+        ? 'Proposed diagnostic: “The selected candidate uses row position. Choose the customer row as a container if row order can change.”'
+        : 'No positional warning is justified for this selected candidate. Duplicate alternatives alone are not a reason to warn.';
+      document.querySelector('#check').disabled = false;
+      resolveCaptured();
+      document.querySelector('#application-result').textContent = `Opened customer: ${name}.`;
+    }
+
+    function reset() {
+      captured = null;
+      stableAttributes = false;
+      rows.clear();
+      customers.replaceChildren();
+      for (const name of ['Ada', 'Ben', 'Cara']) {
+        const row = document.createElement('div');
+        const label = document.createElement('span');
+        label.textContent = name;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.testid = 'edit';
+        button.textContent = 'Edit';
+        button.onclick = () => capture(name, button);
+        row.append(label, button);
+        rows.set(name, { row, button });
+        customers.append(row);
+      }
+      document.querySelector('#mode').textContent = 'All Edit buttons have the same data-testid="edit".';
+      document.querySelector('#captured-name').textContent = 'Click Edit beside Ben to capture a locator.';
+      document.querySelector('#captured-selector').textContent = 'No locator captured.';
+      document.querySelector('#application-result').textContent = 'No customer opened yet.';
+      document.querySelector('#resolution').textContent = 'No check performed.';
+      delete document.querySelector('#resolution').dataset.result;
+      document.querySelector('#candidates').replaceChildren();
+      document.querySelector('#check').disabled = true;
+      document.querySelector('#stable').disabled = false;
+      document.querySelector('#diagnostic').textContent = 'The proposed diagnostic would explain the selected candidate’s dependence on position. No warning is needed merely because a rejected alternative had duplicates.';
+    }
+
+    document.querySelector('#move').onclick = () => customers.prepend(rows.get('Ben').row);
+    document.querySelector('#check').onclick = resolveCaptured;
+    document.querySelector('#stable').onclick = () => {
+      stableAttributes = true;
+      for (const [name, row] of rows) row.button.dataset.testid = `edit-${name.toLowerCase()}`;
+      document.querySelector('#mode').textContent = 'Edit buttons now have unique test IDs: edit-ada, edit-ben, edit-cara. Click Edit beside Ben to capture again.';
+      document.querySelector('#stable').disabled = stableAttributes;
+    };
+    document.querySelector('#reset').onclick = reset;
+    reset();
+  </script>
+</body>
+</html>

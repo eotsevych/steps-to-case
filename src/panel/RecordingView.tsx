@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { Action, ContainerContext, HierarchyOption, ManualStep, Precondition, TestMetadata } from '../types';
+import { containerText } from '../lib/stepName';
 import { ActionsList } from './ActionsList';
 import { PreconditionsSection } from './PreconditionsSection';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
-import { RotateCcw, Pause, Play, Check, Plus, Container, X } from 'lucide-react';
+import { RotateCcw, Pause, Play, Check, Plus, Container, X, Bookmark } from 'lucide-react';
 
 interface Props {
   actions: Action[];
@@ -22,6 +23,7 @@ interface Props {
   onAddPrecondition: () => void;
   onAddAssertion: () => void;
   onAddManualStep: () => void;
+  onCaptureValue: () => void;
   onPickContainerPre: () => void;
   onClearPendingContainer: () => void;
   onRemoveSubAction: (parentActionId: string, subActionId: string) => void;
@@ -53,6 +55,7 @@ export function RecordingView({
   onAddPrecondition,
   onAddAssertion,
   onAddManualStep,
+  onCaptureValue,
   onPickContainerPre,
   onClearPendingContainer,
   debug,
@@ -177,16 +180,18 @@ export function RecordingView({
 
         {/* Steps section */}
         <div id="qa-recording-steps">
-          <div className="flex items-center justify-between mb-2">
+          {/* The buttons wrap under the heading, and then among themselves, when the panel is narrow */}
+          <div className="flex flex-wrap items-center justify-between gap-y-1 mb-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Steps {isPaused && <span className="text-amber-600 font-normal normal-case tracking-normal">(paused)</span>}
             </h2>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center justify-end gap-1 ml-auto">
               <Button
                 id="qa-recording-assertion-btn"
                 data-qa="add-assertion-btn"
                 variant="ghost"
                 size="sm"
+                className="px-1.5"
                 onClick={onAddAssertion}
               >
                 <Plus className="w-3 h-3 mr-1" />
@@ -197,6 +202,7 @@ export function RecordingView({
                 data-qa="pick-container-pre-btn"
                 variant="ghost"
                 size="sm"
+                className="px-1.5"
                 onClick={onPickContainerPre}
               >
                 <Container className="w-3 h-3 mr-1" />
@@ -207,10 +213,23 @@ export function RecordingView({
                 data-qa="add-step-btn"
                 variant="ghost"
                 size="sm"
+                className="px-1.5"
                 onClick={onAddManualStep}
               >
                 <Plus className="w-3 h-3 mr-1" />
                 Manual
+              </Button>
+              <Button
+                id="qa-recording-capture-btn"
+                data-qa="capture-value-btn"
+                variant="ghost"
+                size="sm"
+                className="px-1.5"
+                onClick={onCaptureValue}
+                title="Click an element on the page: the test reads its text on every run and keeps it for later assertions"
+              >
+                <Bookmark className="w-3 h-3 mr-1" />
+                Capture
               </Button>
             </div>
           </div>
@@ -219,7 +238,7 @@ export function RecordingView({
           {pendingContainer && (
             <div data-qa="pending-container-indicator" className="flex items-center gap-2 px-3 py-1.5 mb-2 rounded-md border border-amber-300 bg-amber-50 text-amber-700">
               <span data-qa="pending-container-name" className="text-sm font-semibold flex-1 truncate">
-                Container: {pendingContainer.containerLabel}
+                Container: {containerText(pendingContainer)}
               </span>
               <Button
                 data-qa="clear-pending-container-btn"

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book a room · RoomDesk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="rooms.html">RoomDesk</a>
+    <nav aria-label="Main">
+      <a href="rooms.html" aria-current="page">Rooms</a>
+      <a href="#">My bookings</a>
+    </nav>
+    <span class="user">Signed in as Alex Kim</span>
+  </header>
+
+  <main>
+    <p><a href="rooms.html">← All rooms</a></p>
+    <h1 id="room-heading">Book a room</h1>
+    <p id="room-meta" class="muted"></p>
+
+    <form id="booking-form" class="panel form" aria-label="Booking details">
+      <label class="field">Meeting title
+        <input type="text" id="title" name="title" placeholder="e.g. Sprint planning" autocomplete="off" required>
+      </label>
+
+      <fieldset>
+        <legend>Time</legend>
+        <div class="slots">
+          <label class="slot"><input type="radio" name="slot" value="09:00" disabled> 09:00 (booked)</label>
+          <label class="slot"><input type="radio" name="slot" value="10:30"> 10:30</label>
+          <label class="slot"><input type="radio" name="slot" value="13:00"> 13:00</label>
+          <label class="slot"><input type="radio" name="slot" value="15:30"> 15:30</label>
+        </div>
+      </fieldset>
+
+      <div>
+        <label class="field">Invite people
+          <input type="email" id="attendee" name="attendee" placeholder="Email, then press Enter" autocomplete="off">
+        </label>
+        <ul id="attendees" class="chips" aria-label="Invited people"></ul>
+      </div>
+
+      <label class="check"><input type="checkbox" id="video" name="video"> Add a video call link</label>
+
+      <div class="actions">
+        <button type="submit" id="confirm" class="btn primary" disabled>Confirm booking</button>
+        <span class="muted">You can cancel up to 1 hour before.</span>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const roomId = params.get('room') || 'atlas';
+    const day = params.get('day') || 'Today';
+    const form = document.getElementById('booking-form');
+    const confirmBtn = document.getElementById('confirm');
+    const attendeeInput = document.getElementById('attendee');
+    const attendeeList = document.getElementById('attendees');
+    const attendees = [];
+    let room = { name: roomId };
+
+    fetch('api/rooms.json').then((r) => r.json()).then((rooms) => {
+      room = rooms.find((r) => r.id === roomId) || room;
+      document.getElementById('room-heading').textContent = `Book ${room.name}`;
+      document.getElementById('room-meta').textContent = `${day} · ${room.seats} seats · ${room.floor}`;
+    });
+
+    // Confirm is enabled only when the title and a time are set.
+    form.addEventListener('input', () => {
+      confirmBtn.disabled = !(form.title.value.trim() && form.slot.value);
+    });
+
+    attendeeInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const email = attendeeInput.value.trim();
+      if (!email) return;
+      attendees.push(email);
+      attendeeList.insertAdjacentHTML('beforeend', `<li class="chip">${email.replace(/</g, '&lt;')}</li>`);
+      attendeeInput.value = '';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Booking…';
+      const { ref } = await fetch(`api/booking.json?room=${roomId}`).then((r) => r.json());
+      sessionStorage.setItem('booking', JSON.stringify({
+        ref, room: room.name, day, slot: form.slot.value,
+        title: form.title.value.trim(), attendees, video: form.video.checked,
+      }));
+      location.href = `confirmed.html?ref=${ref}`;
+    });
+  </script>
+</body>
+</html>

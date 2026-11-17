@@ -1,10 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "StepsToCase",
-  "version": "1.0.2",
-  "description": "Turn recorded QA steps into structured test cases with rich metadata",
+  "name": "StepsToCase: QA Test Recorder & Test Case Generator",
+  "version": "1.1.0",
+  "description": "Record a manual test in Chrome. Get a readable test case and JSON your AI agent turns into Playwright, Cypress or Selenium tests.",
   "permissions": [
-    "activeTab",
     "scripting",
     "storage",
     "sidePanel",

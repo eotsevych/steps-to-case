@@ -43,6 +43,11 @@ function normalizeStateShape() {
 // Persistence — survive service worker restarts
 // ============================================================
 
+/** True while a content script should capture; the content script reads this key to skip waking the worker. */
+const isRecordingOn = () => state.phase === 'recording' && !state.isPaused;
+
+let saveFailureShown = false;
+
 function saveState(): Promise<void> {
   return chrome.storage.local.set({
     recorderState: {
@@ -57,11 +62,20 @@ function saveState(): Promise<void> {
       isPaused: state.isPaused,
       lastPagePath: state.lastPagePath,
       baseUrl: state.baseUrl,
+      tabIds: state.tabIds,
     },
     activeTabId,
+    recordingOn: isRecordingOn(),
+  }).then(() => {
+    saveFailureShown = false;
   }).catch((error) => {
     // Most likely the 10 MB storage quota; the in-memory state is still intact.
     console.warn('[StepsToCase] Could not save recorder state:', error);
+    // saveState runs on every change: tell the user once until a save works again
+    if (!saveFailureShown) {
+      saveFailureShown = true;
+      notify('The recording could not be saved (it is probably too large). Export it now, or delete steps you do not need.');
+    }
   });
 }
 
@@ -78,6 +92,8 @@ async function restoreState() {
   if (stored.activeTabId) {
     activeTabId = stored.activeTabId;
   }
+  // Also fixes the key for a recording saved before it existed
+  chrome.storage.local.set({ recordingOn: isRecordingOn() }).catch(() => {});
   stateReady = true;
 }
 
@@ -96,6 +112,7 @@ function resetState() {
     baseUrl: undefined,
     pendingContainer: undefined,
     isElementPickerActive: false,
+    tabIds: undefined,
   });
   activeTabId = undefined;
   saveState();
@@ -141,21 +158,22 @@ function isRecordedTab(tab: chrome.tabs.Tab | undefined): boolean {
   return !!tab && activeTabId !== undefined && (tab.id === activeTabId || tab.openerTabId === activeTabId);
 }
 
-/** Start/stop the tabs the recording tab opened, so they follow the recording state. */
+/**
+ * Start/stop the tabs the recording tab opened, so they follow the recording state.
+ * Resolves when they have answered (a closed tab errors, a stuck one is given up on after 2 s).
+ */
 async function sendToChildTabs(type: 'START' | 'STOP') {
   if (activeTabId === undefined) return;
-  for (const tab of await chrome.tabs.query({})) {
-    if (tab.id !== undefined && tab.openerTabId === activeTabId) {
-      chrome.tabs.sendMessage(tab.id, { source: 'qa-recorder-control', type }).catch(() => {});
-    }
-  }
+  const replies = (await chrome.tabs.query({}))
+    .filter(tab => tab.id !== undefined && tab.openerTabId === activeTabId)
+    .map(tab => chrome.tabs.sendMessage(tab.id!, { source: 'qa-recorder-control', type }).catch(() => {}));
+  await Promise.race([Promise.all(replies), new Promise(resolve => setTimeout(resolve, 2000))]);
 }
 
-/** Tell the recording tab to stop; it flushes a pending fill before it answers. */
-function stopActiveTab(): Promise<void> {
-  if (!activeTabId) return Promise.resolve();
-  void sendToChildTabs('STOP');
-  return sendToTab(activeTabId, { source: 'qa-recorder-control', type: 'STOP' });
+/** Tell the recording tab and its child tabs to stop; each flushes a pending fill before it answers. */
+async function stopActiveTab(): Promise<void> {
+  if (!activeTabId) return;
+  await Promise.all([sendToChildTabs('STOP'), sendToTab(activeTabId, { source: 'qa-recorder-control', type: 'STOP' })]);
 }
 
 /** Short message for the panel's notice banner. */
@@ -348,7 +366,7 @@ function handleMessage(
 
     case 'IS_RECORDING':
       sendResponse({
-        on: state.phase === 'recording' && !state.isPaused && contentScript && isRecordedTab(sender.tab),
+        on: isRecordingOn() && contentScript && isRecordedTab(sender.tab),
       });
       return;
 
@@ -378,12 +396,16 @@ function handleMessage(
       state.actions = [];
       state.pages = [];
       state.testMetadata.timestamp = new Date().toISOString();
+      state.tabIds = [activeTabId];
 
       chrome.tabs.get(activeTabId, (tab) => {
         if (tab?.url) {
           state.testMetadata.startUrl = getPath(tab.url);
           try {
-            state.baseUrl = new URL(tab.url).origin;
+            const url = new URL(tab.url);
+            state.baseUrl = url.origin;
+            // The start page can need its query (?filename=…) to open; secrets are masked on export
+            state.testMetadata.startUrl += url.search;
           } catch { /* ignore */ }
           // This callback can run after the initial broadcast — persist again
           // so startUrl/baseUrl survive a service worker restart.
@@ -526,7 +548,7 @@ function handleMessage(
 
     case 'ACTION_CAPTURED': {
       // When paused, only allow manually added steps and assertions (not auto-captured actions)
-      const isManualAction = message.action.type === 'step' || message.action.type === 'assert';
+      const isManualAction = message.action.type === 'step' || message.action.type === 'assert' || message.action.type === 'capture';
       if (state.isPaused && !isManualAction) {
         sendResponse({ ok: true });
         return;
@@ -544,7 +566,18 @@ function handleMessage(
           ...parseRecordedPageContext(sender.tab.url, sender.tab.title ?? ''),
           pageTag: action.page.pageTag,
           frameUrl: action.page.frameUrl,
+          frameId: action.page.frameId,
+          frameName: action.page.frameName,
         };
+      }
+
+      // Number the tabs in order of first use; the starting tab stays unnumbered
+      const tabId = contentScript ? sender.tab?.id : undefined;
+      if (tabId !== undefined) {
+        state.tabIds ??= [];
+        if (!state.tabIds.includes(tabId)) state.tabIds.push(tabId);
+        const tab = state.tabIds.indexOf(tabId) + 1;
+        if (tab > 1) action.tab = tab;
       }
 
       // Attach pending container (pre-action pick) — single-shot, cleared after use
@@ -593,7 +626,13 @@ function handleMessage(
     }
 
     case 'LOAD_RECORDING': {
-      const imported = normalizeImportedRecording(message.recording);
+      let imported: ReturnType<typeof normalizeImportedRecording>;
+      try {
+        imported = normalizeImportedRecording(message.recording);
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) });
+        return;
+      }
       Object.assign(state, {
         phase: 'review',
         mode: 'full',
@@ -609,6 +648,7 @@ function handleMessage(
         baseUrl: imported.baseUrl,
         pendingContainer: undefined,
         isElementPickerActive: false,
+        tabIds: undefined,
       });
       broadcastState();
       sendResponse({ ok: true });
@@ -699,7 +739,10 @@ function handleMessage(
     case 'UPDATE_ACTION_TEXT': {
       eachList(actions => {
         const action = findAction(actions, message.actionId);
-        if (action) action.customText = message.customText;
+        if (!action) return;
+        // The text of a capture step is the name of its saved value (see getStepTextTemplate)
+        if (action.type === 'capture') action.actionData = { ...action.actionData, captureName: message.customText };
+        else action.customText = message.customText;
       });
       broadcastState();
       sendResponse({ ok: true });
@@ -710,6 +753,11 @@ function handleMessage(
       eachList(actions => {
         const action = findAction(actions, message.actionId);
         if (!action) return;
+        // On a capture step the picked text names the saved value; the element keeps its own description
+        if (action.type === 'capture') {
+          action.actionData = { ...action.actionData, captureName: message.text };
+          return;
+        }
         action.selectors.contextText = message.text;
         if (message.source !== undefined) action.selectors.descriptionSource = message.source;
         if (message.level !== undefined) action.selectors.descriptionHierarchy = message.level;
@@ -838,39 +886,20 @@ function handleMessage(
 
     case 'ELEMENT_PICKED':
       state.isElementPickerActive = false;
-      if (containerPickActionId) {
-        // Post-hoc container pick — extract label + tag and update existing action
-        const label = message.selectors?.contextText
-          || message.elementInfo.accessibleName
-          || message.elementInfo.ariaLabel
-          || message.elementInfo.innerText
-          || message.elementInfo.title
-          || '';
-        const containerContext: { containerTag: string; containerLabel: string; containerHtml?: string } = {
-          containerTag: message.elementInfo.tagName,
-          containerLabel: label,
-        };
-        if (message.containerHtml) {
-          containerContext.containerHtml = message.containerHtml;
-        }
-        // Find and update the action
-        const pickedForId = containerPickActionId;
-        eachList(actions => {
-          const action = findAction(actions, pickedForId);
-          if (action) action.containerContext = containerContext;
-        });
-        containerPickActionId = undefined;
-        broadcastState();
-      } else if (containerPrePickMode) {
-        // Pre-action container pick — forward to the panel so the user can
-        // name the container; the panel replies with SET_PENDING_CONTAINER.
-        containerPrePickMode = false;
+      if (containerPickActionId || containerPrePickMode) {
+        // Container pick, for an existing step (actionId) or for the next one: the panel asks for
+        // the name and identity, then replies with SET_ACTION_CONTAINER or SET_PENDING_CONTAINER.
         chrome.runtime.sendMessage({
           type: 'CONTAINER_PRE_PICKED',
+          actionId: containerPickActionId,
           elementInfo: message.elementInfo,
           selectors: message.selectors,
           containerHtml: message.containerHtml,
+          identityCandidates: message.identityCandidates,
+          similarContainers: message.similarContainers,
         }).catch(() => {});
+        containerPrePickMode = false;
+        containerPickActionId = undefined;
         broadcastState();
       } else {
         // Existing assertion picker flow — forward to panel
@@ -929,6 +958,16 @@ function handleMessage(
       return;
     }
 
+    case 'SET_ACTION_CONTAINER': {
+      eachList(actions => {
+        const action = findAction(actions, message.actionId);
+        if (action) action.containerContext = message.containerContext;
+      });
+      broadcastState();
+      sendResponse({ ok: true });
+      return;
+    }
+
     case 'CLEAR_PENDING_CONTAINER': {
       state.pendingContainer = undefined;
       broadcastState();
@@ -944,6 +983,8 @@ function handleMessage(
   }
 }
 
+const NAVIGATION_WINDOW_MS = 5000;
+
 // Listen for tab URL changes — attach navigation to previous action instead of creating a separate step
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (tabId === activeTabId && state.phase === 'recording' && !state.isPaused && changeInfo.url) {
@@ -952,7 +993,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
       const navTitle = changeInfo.title || '';
       const lastAction = state.actions[state.actions.length - 1];
 
-      if (lastAction) {
+      // Only a navigation right after the step can be its result (timestamp is ms since startTime)
+      if (lastAction && state.startTime && Date.now() - state.startTime - lastAction.timestamp < NAVIGATION_WINDOW_MS) {
         // Attach navigation to the most recent action
         if (!lastAction.actionData) lastAction.actionData = {};
         lastAction.actionData.triggeredNavigation = {
@@ -966,6 +1008,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
       // Invalid URL
     }
   }
+});
+
+// Tab ids are only valid within one browser session: after a restart the saved one may be another tab.
+// Keep the steps, drop the tab and pause, so Continue picks the tab again.
+chrome.runtime.onStartup.addListener(async () => {
+  await stateReadyPromise;
+  activeTabId = undefined;
+  if (state.phase === 'recording') state.isPaused = true;
+  broadcastState();
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {

@@ -15,8 +15,10 @@ import type {
   Selectors,
   StepPage,
   TestMetadata,
+  TriggeredRequest,
 } from '../types';
 import { normalizeRecordedPageUrl } from './pageUrl';
+import { flattenActions, pageActions } from './vault';
 
 // Turns untrusted input (stored state from older versions, or a user's JSON
 // file in either the internal or the export format) into valid internal types.
@@ -38,7 +40,12 @@ const actionTypes = new Set<ActionType>([
   'dblclick',
   'assert',
   'step',
+  'capture',
 ]);
+
+// Export format links an assertion to a saved value by name (saveAs / valueFrom); internally the link is a step id.
+// Filled while one export-format recording is imported, then resolved in normalizeImportedRecording.
+let savedValueIds = new Map<string, string>();
 
 const assertionTypes = new Set<AssertionType>([
   'text_equals',
@@ -170,6 +177,11 @@ function normalizePageContext(value: unknown, fallback?: Partial<PageContext>): 
     domain: stringValue(source.domain, fallback?.domain ?? parts.domain),
     pathname: stringValue(source.pathname, fallback?.pathname ?? parts.pathname),
     pageTag: stringValue(source.pageTag, fallback?.pageTag ?? '') || undefined,
+    // Where the step ran; restoring stored state must not drop these
+    frameUrl: stringValue(source.frameUrl, fallback?.frameUrl ?? '') || undefined,
+    frameId: stringValue(source.frameId) || undefined,
+    frameName: stringValue(source.frameName) || undefined,
+    query: stringValue(source.query) || undefined,
   };
 }
 
@@ -227,6 +239,7 @@ function normalizeSelectors(value: unknown, element: ElementInfo, contextText = 
   return {
     primary: normalizeSelectorOption(value.primary, fallbackPrimary),
     alternatives: arrayValue(value.alternatives).map(option => normalizeSelectorOption(option)),
+    shadowHost: stringValue(value.shadowHost) || undefined,
     contextText: stringValue(value.contextText, contextText) || undefined,
     descriptionHierarchy: typeof value.descriptionHierarchy === 'string' ? value.descriptionHierarchy as Selectors['descriptionHierarchy'] : undefined,
     descriptionSource: stringValue(value.descriptionSource) || undefined,
@@ -242,10 +255,17 @@ function normalizeContainerContext(value: unknown): ContainerContext | undefined
   const containerLabel = stringValue(value.containerLabel);
   if (!containerTag && !containerLabel) return undefined;
 
+  const identity = arrayValue(value.identity).filter(isRecord)
+    .map(field => ({ source: stringValue(field.source), value: stringValue(field.value) }))
+    .filter(field => field.value);
+
   return {
     containerTag,
     containerLabel,
     containerHtml: stringValue(value.containerHtml) || undefined,
+    // Files from before container identity have none: the container is then known by its label and HTML only
+    ...(identity.length ? { identity } : {}),
+    ...(identity.length && typeof value.identityUnique === 'boolean' ? { identityUnique: value.identityUnique } : {}),
   };
 }
 
@@ -287,8 +307,15 @@ function normalizeAction(value: unknown, index: number, fallbackPage: PageContex
     selectors,
   };
 
-  if (isRecord(source.actionData)) action.actionData = source.actionData as Action['actionData'];
-  if (Array.isArray(source.expectedResults)) action.expectedResults = source.expectedResults as Action['expectedResults'];
+  if (isRecord(source.actionData)) {
+    action.actionData = { ...source.actionData } as Action['actionData'];
+    // The export reads url off every entry, so keep only entries that have one
+    if ('triggeredRequests' in source.actionData) {
+      action.actionData!.triggeredRequests = arrayValue(source.actionData.triggeredRequests)
+        .filter((req): req is TriggeredRequest => isRecord(req) && typeof req.url === 'string');
+    }
+  }
+  if (Array.isArray(source.expectedResults)) action.expectedResults = source.expectedResults.filter(isRecord) as unknown as Action['expectedResults'];
   const subActions = arrayValue(source.subActions).map((sub, subIndex) => normalizeAction(sub, subIndex, page));
   if (subActions.length > 0) action.subActions = subActions;
   const manualSubSteps = normalizeManualSubSteps(source.manualSubSteps, id);
@@ -298,13 +325,20 @@ function normalizeAction(value: unknown, index: number, fallbackPage: PageContex
   const containerContext = normalizeContainerContext(source.containerContext);
   if (containerContext) action.containerContext = containerContext;
   if (typeof source.componentTag === 'string') action.componentTag = source.componentTag;
+  if (typeof source.tab === 'number') action.tab = source.tab;
 
   return action;
+}
+
+// Files from before actionType existed have none; assertions are told apart by stepType
+function exportedActionType(value: unknown): ActionType | undefined {
+  return actionTypes.has(value as ActionType) && value !== 'assert' ? value as ActionType : undefined;
 }
 
 function inferActionType(actionName: string, stepType: string): ActionType {
   const normalized = actionName.toLowerCase();
   if (stepType.startsWith('ASSERTION')) return 'assert';
+  if (stepType === 'CAPTURE') return 'capture';
   if (normalized.startsWith('double-click')) return 'dblclick';
   if (normalized.startsWith('click')) return 'click';
   if (normalized.startsWith('fill') || normalized.startsWith('type')) return 'fill';
@@ -356,6 +390,8 @@ function containerFromExportStep(step: UnknownRecord): ContainerContext | undefi
     containerTag: step.containerTag,
     containerLabel: step.containerLabel,
     containerHtml: step.containerHtml,
+    identity: step.containerIdentity,
+    identityUnique: step.containerIdentityUnique,
   });
 }
 
@@ -406,7 +442,7 @@ function exportStepToAction(value: unknown, index: number, page: PageContext): A
   const element = elementFromExportStep(value, isAssertion);
   const selectors = normalizeSelectors(undefined, element, stringValue(value.selectorContextText) || stringValue(value.assertSelectorContextText));
   // Manual steps and comments are free text — "Click on Save" written by a person is not a recorded click
-  const type = stepType.startsWith('MANUAL') || actionKind === 'comment' ? 'step' : inferActionType(actionName, stepType);
+  const type = stepType.startsWith('MANUAL') || actionKind === 'comment' ? 'step' : exportedActionType(value.actionType) ?? inferActionType(actionName, stepType);
   const action: Action = {
     id: generateId(),
     type,
@@ -424,8 +460,11 @@ function exportStepToAction(value: unknown, index: number, page: PageContext): A
       assertion: {
         type: normalizeAssertionType(value.assertElementType),
         expectedValue: stringValue(value.actionValue) || undefined,
+        expectedValueFrom: stringValue(value.valueFrom) || undefined, // a name until resolved
       },
     }];
+  } else if (type === 'capture') {
+    action.actionData = { value: stringValue(value.actionValue), captureName: stringValue(value.saveAs) };
   } else if (type === 'fill') {
     action.actionData = { value: stringValue(value.actionValue) };
   } else if (type === 'press') {
@@ -439,7 +478,15 @@ function exportStepToAction(value: unknown, index: number, page: PageContext): A
   const containerContext = containerFromExportStep(value);
   if (containerContext) action.containerContext = containerContext;
   if (typeof value.componentTag === 'string') action.componentTag = value.componentTag;
-  if (typeof value.frameUrl === 'string') action.page = { ...action.page, frameUrl: value.frameUrl };
+  action.page = {
+    ...action.page,
+    frameUrl: stringValue(value.frameUrl) || undefined,
+    frameId: stringValue(value.frameId) || undefined,
+    frameName: stringValue(value.frameName) || undefined,
+    query: stringValue(value.pageQuery) || undefined,
+  };
+  if (typeof value.tab === 'number') action.tab = value.tab;
+  if (typeof value.saveAs === 'string' && value.saveAs) savedValueIds.set(value.saveAs, action.id);
 
   return action;
 }
@@ -476,6 +523,7 @@ function normalizePage(value: unknown, index: number, manualSteps: ManualStep[])
   const pageContext = normalizePageContext(source.pageContext, {
     url: stringValue(source.pageUrl),
     title: stringValue(source.pageTitle),
+    domain: stringValue(source.pageDomain) || undefined,
     pageTag: stringValue(source.pageTag) || undefined,
   });
   const id = stringValue(source.id, generateId());
@@ -565,7 +613,14 @@ export function normalizeImportedRecording(recording: unknown): {
 
   const sourcePages = Array.isArray(source.pages) ? source.pages : getLegacyPages(source);
   const subgroupSteps: ManualStep[] = [];
+  savedValueIds = new Map();
   let pages = normalizePages(sourcePages, subgroupSteps);
+  for (const action of flattenActions(pageActions(pages))) {
+    for (const er of action.expectedResults ?? []) {
+      const id = er.assertion?.expectedValueFrom && savedValueIds.get(er.assertion.expectedValueFrom);
+      if (id) er.assertion!.expectedValueFrom = id;
+    }
+  }
 
   if (pages.length === 0 && Array.isArray(source.actions)) {
     const fallbackPageContext = normalizePageContext(undefined, {

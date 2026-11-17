@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login Repro</title>
+  <!--
+    Reproduces two recorder bugs. Serve over http (the recorder ignores file:// requests):
+      python3 -m http.server 8123 -d test-pages/login-repro   →   http://localhost:8123
+    PR #3: password leaks after a "show password" toggle.
+    PR #4: a fill typed just before a navigating click is lost, and so are the click's requests.
+  -->
+  <style>
+    :root {
+      --bg: #f6f7fb; --card: #fff; --ink: #1b1f2a; --muted: #5d6475; --line: #dfe3ec;
+      --brand: #3b5bfd; --bad: #c2410c; --good: #15803d; --code: #f1f3f8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #12141a; --card: #1b1e27; --ink: #e8eaf0; --muted: #9aa1b2; --line: #2c3040;
+              --brand: #7b93ff; --bad: #fb923c; --good: #4ade80; --code: #232735; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; display: grid; gap: 24px; grid-template-columns: 360px 1fr; align-items: start; }
+    @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+    h1 { font-size: 24px; margin: 0 0 16px; }
+    h2 { font-size: 18px; margin: 0 0 8px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+    form { display: grid; gap: 14px; }
+    label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+    input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); width: 100%; }
+    .pass-row { display: flex; gap: 8px; }
+    button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 10px 14px; cursor: pointer; }
+    button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+    .muted { color: var(--muted); font-size: 14px; }
+    pre { background: var(--code); border-radius: 8px; padding: 12px; font-size: 13px; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0; }
+    .leak { color: var(--bad); font-weight: 700; }
+    ol { padding-left: 20px; margin: 8px 0; }
+    li { margin: 4px 0; }
+    .expect { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin-top: 10px; }
+    .expect b:nth-of-type(odd) { color: var(--bad); }
+    .expect b:nth-of-type(even) { color: var(--good); }
+    code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    .scenario + .scenario { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+    #signed-in { display: none; }
+    body.done #login { display: none; }
+    body.done #signed-in { display: block; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <div id="login">
+        <h1>Sign in</h1>
+        <form id="login-form" aria-label="Sign in">
+          <label>Email
+            <input type="email" id="email" name="email" autocomplete="off">
+          </label>
+          <!-- No "password" in the label, id, name or placeholder, and no autocomplete hint:
+               the exporter's fallback check finds nothing, and PR #3 has to catch the toggle itself -->
+          <label for="pass">Passcode</label>
+          <div class="pass-row">
+            <input type="password" id="pass" name="pass">
+            <button type="button" id="toggle" aria-label="Show passcode">👁 Show</button>
+          </div>
+          <button type="submit" class="primary">Sign in</button>
+        </form>
+        <p class="muted">The passcode input as it is in the DOM right now (React-style: the typed value is copied into the <code>value</code> attribute):</p>
+        <pre id="dom"></pre>
+      </div>
+      <div id="signed-in">
+        <h1>Signed in ✓</h1>
+        <p>This is a new page load: the old page and its timers are gone.<br>Stop recording and export the JSON.</p>
+        <p><a href="./">← Back to sign in</a></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="scenario">
+        <h2>Bug 1 · password leaks after "Show" (PR #3)</h2>
+        <ol>
+          <li>Start recording.</li>
+          <li>Type an email.</li>
+          <li>Click <b>👁 Show</b>, then type a passcode, e.g. <code>hunter2-secret</code>.</li>
+          <li>Wait 1 second, then click <b>Sign in</b>.</li>
+          <li>Stop recording and export JSON. Search for <code>hunter2</code>.</li>
+        </ol>
+        <div class="expect">
+          <b>main</b><span>found in the fill step's <code>actionValue</code>, in <code>elementAttributes.value</code>, and in the container HTML.</span>
+          <b>PR #3</b><span>not found: <code>actionValue</code> is <code>••••••••</code>, <code>value</code> is gone from the attributes and the HTML. The email <code>value</code> stays.</span>
+        </div>
+      </div>
+
+      <div class="scenario">
+        <h2>Bug 2 · fill and requests lost on a quick click (PR #4)</h2>
+        <ol>
+          <li>Start recording. Do not click Show.</li>
+          <li>Type an email.</li>
+          <li>Type a passcode and click <b>Sign in</b> straight away, within half a second of the last key.</li>
+          <li>Stop recording and look at the steps.</li>
+        </ol>
+        <div class="expect">
+          <b>main</b><span>no "Fill Passcode" step (or it comes after the click). "Click Sign in" has no requests.</span>
+          <b>PR #4</b><span>Fill Email → Fill Passcode → Click Sign in, and that click has <code>/api/login.json</code> in its requests.</span>
+        </div>
+        <p class="muted">Also try it slowly (wait 1 s before clicking). On main the fill is saved, but "Click Sign in" still has no requests: the page leaves before the 2-second request timer fires.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    if (new URLSearchParams(location.search).has('signed-in')) document.body.classList.add('done');
+
+    const pass = document.getElementById('pass');
+    const toggle = document.getElementById('toggle');
+    const dom = document.getElementById('dom');
+
+    function showDom() {
+      const html = pass.outerHTML.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      dom.innerHTML = html.replace(/(value="[^"]*")/, '<span class="leak">$1</span>');
+    }
+
+    // Mirror the typed value into the attribute, the way React controlled inputs do
+    for (const input of [document.getElementById('email'), pass]) {
+      input.addEventListener('input', () => { input.setAttribute('value', input.value); showDom(); });
+    }
+
+    toggle.addEventListener('click', () => {
+      const show = pass.type === 'password';
+      pass.type = show ? 'text' : 'password';
+      toggle.textContent = show ? '🙈 Hide' : '👁 Show';
+      toggle.setAttribute('aria-label', show ? 'Hide passcode' : 'Show passcode');
+      showDom();
+    });
+
+    // Call the API, then leave the page at once, like a real login redirect
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch('api/login.json', { cache: 'no-store' });
+      location.href = '?signed-in=1';
+    });
+
+    showDom();
+  </script>
+</body>
+</html>

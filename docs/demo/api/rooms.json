@@ -1,0 +1,8 @@
+[
+  {"id": "atlas",  "name": "Atlas",  "office": "berlin", "floor": "3rd floor", "seats": 8,  "features": ["Screen", "Whiteboard"]},
+  {"id": "fjord",  "name": "Fjord",  "office": "berlin", "floor": "3rd floor", "seats": 4,  "features": ["Screen"]},
+  {"id": "harbor", "name": "Harbor", "office": "berlin", "floor": "5th floor", "seats": 12, "features": ["Screen", "Video bar", "Whiteboard"]},
+  {"id": "tejo",   "name": "Tejo",   "office": "lisbon", "floor": "1st floor", "seats": 6,  "features": ["Screen"]},
+  {"id": "alfama", "name": "Alfama", "office": "lisbon", "floor": "2nd floor", "seats": 10, "features": ["Video bar", "Whiteboard"]},
+  {"id": "nook",   "name": "Nook",   "office": "lisbon", "floor": "2nd floor", "seats": 2,  "features": []}
+]

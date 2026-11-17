@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Booking confirmed · RoomDesk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="rooms.html">RoomDesk</a>
+    <nav aria-label="Main">
+      <a href="rooms.html">Rooms</a>
+      <a href="#">My bookings</a>
+    </nav>
+    <span class="user">Signed in as Alex Kim</span>
+  </header>
+
+  <main>
+    <section class="panel success" aria-labelledby="done-heading">
+      <div class="icon" aria-hidden="true">✓</div>
+      <h1 id="done-heading">Booking confirmed</h1>
+      <p id="booking-summary" class="summary" data-testid="booking-summary"></p>
+
+      <div class="actions" style="justify-content: center">
+        <button type="button" id="add-calendar" class="btn primary">Add to calendar</button>
+        <a class="btn" href="rooms.html">Book another room</a>
+      </div>
+      <p id="toast" class="toast" role="status"></p>
+    </section>
+  </main>
+
+  <script>
+    let b = {};
+    try { b = JSON.parse(sessionStorage.getItem('booking')) || {}; } catch {}
+    const set = (id, text) => { document.getElementById(id).textContent = text; };
+    // One line on purpose: the demo checks the whole booking with a single text assertion.
+    const ref = b.ref || new URLSearchParams(location.search).get('ref') || '—';
+    const guests = b.attendees && b.attendees.length ? `with ${b.attendees.join(', ')}` : 'just you';
+    set('booking-summary', `${ref}: ${b.room || '—'}, ${b.day || '—'} ${b.slot || ''}, "${b.title || '—'}", ${guests}, ${b.video ? 'video call' : 'no video call'}`);
+
+    document.getElementById('add-calendar').addEventListener('click', () => {
+      set('toast', 'Added to your calendar');
+    });
+  </script>
+</body>
+</html>

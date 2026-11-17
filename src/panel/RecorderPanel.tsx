@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import type {ElementInfo, ExpectedResult, ExportRecording, HierarchyOption, Precondition, Selectors, TestRecording} from '../types';
+import type {ContainerIdentityCandidate, ContainerIdentityField, ElementInfo, ExpectedResult, ExportRecording, HierarchyOption, Precondition, Selectors, TestRecording} from '../types';
 import {useRecorderState} from './useRecorderState';
 import {usePanelSettings} from './usePanelSettings';
 import {TestMetadataForm} from './TestMetadataForm';
@@ -13,14 +13,20 @@ import {AddStepModal} from './AddStepModal';
 import {AddPreconditionModal} from './AddPreconditionModal';
 import {ContainerNameModal} from './ContainerNameModal';
 import {DiscardConfirmModal} from './DiscardConfirmModal';
+import {buildVault} from '../lib/vault';
+import {generateId} from '../lib/recordingImport';
 import {buildExportRecording, exportSingleStepToJson} from '../lib/exporter';
 import {parseRecordedPageContext} from '../lib/pageUrl';
+import {containerText} from '../lib/stepName';
 
 /** Element pre-picked as a container, awaiting a name from the user. */
 interface PrePickedContainer {
+  actionId?: string; // set when the container is for an existing step, not for the next one
   tagName: string;
   suggestedName: string;
   containerHtml?: string;
+  identityCandidates?: ContainerIdentityCandidate[];
+  similarContainers?: number;
 }
 
 export function RecorderPanel() {
@@ -31,6 +37,8 @@ export function RecorderPanel() {
   const [finishRecording, setFinishRecording] = useState<ExportRecording | null>(null);
   const [showAddStep, setShowAddStep] = useState(false);
   const [showAddPrecondition, setShowAddPrecondition] = useState(false);
+  // Capture: the element picked next becomes a step at once, named after the text around it
+  const [capturing, setCapturing] = useState(false);
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [editingAssertionState, setEditingAssertionState] = useState<{ actionId: string; resultIndex: number } | null>(null);
   const [prePickedElement, setPrePickedElement] = useState<PrePickedContainer | null>(null);
@@ -47,7 +55,7 @@ export function RecorderPanel() {
   // ignoring the raw ELEMENT_PICKED from the content script which the SW may
   // have already consumed for container picking.
   useEffect(() => {
-    const listener = (message: { type: string; elementInfo?: ElementInfo; selectors?: Selectors; containerHtml?: string; text?: string }, sender: chrome.runtime.MessageSender) => {
+    const listener = (message: { type: string; elementInfo?: ElementInfo; selectors?: Selectors; containerHtml?: string; text?: string; actionId?: string; identityCandidates?: ContainerIdentityCandidate[]; similarContainers?: number }, sender: chrome.runtime.MessageSender) => {
       if (sender.tab) return; // ignore messages from content scripts
       if (message.type === 'NOTICE' && message.text) setNotice(message.text);
       if (message.type === 'ELEMENT_PICKED' && message.elementInfo && message.selectors) {
@@ -56,6 +64,9 @@ export function RecorderPanel() {
       if (message.type === 'CONTAINER_PRE_PICKED' && message.elementInfo) {
         const el = message.elementInfo;
         setPrePickedElement({
+          actionId: message.actionId,
+          identityCandidates: message.identityCandidates,
+          similarContainers: message.similarContainers,
           tagName: el.tagName,
           suggestedName: message.selectors?.contextText
             || el.accessibleName || el.ariaLabel || el.innerText?.slice(0, 60) || el.title || el.tagName || '',
@@ -167,7 +178,51 @@ export function RecorderPanel() {
     setPickedElement(null);
   };
 
-  const handlePickElement = () => send({type: 'ELEMENT_PICKER_START'});
+  /** Every element pick starts here, so a pick for an assertion is never taken for a capture. */
+  const startPick = (capture: boolean, pageUrl?: string) => {
+    setCapturing(capture);
+    if (capture) setPickedElement(null);
+    return send({type: 'ELEMENT_PICKER_START', pageUrl});
+  };
+
+  const handlePickElement = () => startPick(false);
+
+  // Declared before the effect below: a pick and the picker closing can arrive in one render
+  useEffect(() => {
+    if (!capturing || !pickedElement) return;
+    const {elementInfo, selectors} = pickedElement;
+    setCapturing(false);
+    setPickedElement(null);
+    const value = (elementInfo.innerText || elementInfo.textContent || '').trim();
+    if (!value) {
+      setNotice('That element has no text to save. Click Capture and pick another one.');
+      return;
+    }
+    // Default name: the container, else the nearest text around the element (its label), as for a recorded step
+    const captureName = state.pendingContainer
+      ? containerText(state.pendingContainer)
+      : selectors.descriptionCandidates?.find(c => c.text !== value && c.text.length <= 60)?.text ?? 'Saved value';
+    void (async () => {
+      const tab = await resolveTargetTab();
+      await send({
+        type: 'ACTION_CAPTURED',
+        action: {
+          id: '',
+          type: 'capture',
+          timestamp: 0,
+          element: elementInfo,
+          page: parseRecordedPageContext(tab?.url || '', tab?.title || ''),
+          selectors,
+          actionData: {value, captureName},
+        },
+      });
+    })();
+  }, [capturing, pickedElement]);
+
+  // The picker closed with nothing picked (Esc)
+  useEffect(() => {
+    if (!state.isElementPickerActive) setCapturing(false);
+  }, [state.isElementPickerActive]);
 
   const handleFinish = () => setFinishRecording(buildExportRecording(state));
 
@@ -185,9 +240,11 @@ export function RecorderPanel() {
         try {
           const text = await file.text();
           const recording: TestRecording = JSON.parse(text);
-          await send({type: 'LOAD_RECORDING', recording});
+          const reply = await send({type: 'LOAD_RECORDING', recording});
+          if (reply?.ok === false) setNotice(`Could not load ${file.name}: ${reply.error ?? 'unknown error'}`);
         } catch (e) {
           console.error('[StepsToCase] Failed to load JSON:', e);
+          setNotice(`Could not load ${file.name}: it is not a valid JSON file.`);
         }
         input.value = '';
       });
@@ -237,14 +294,18 @@ export function RecorderPanel() {
 
   const handleClearPendingContainer = () => send({type: 'CLEAR_PENDING_CONTAINER'});
 
-  const handleConfirmPendingContainer = async (containerLabel: string) => {
+  const handleConfirmPendingContainer = async (containerLabel: string, identity?: ContainerIdentityField[], identityUnique?: boolean) => {
     if (!prePickedElement) return;
     await send({
-      type: 'SET_PENDING_CONTAINER',
+      ...(prePickedElement.actionId
+        ? {type: 'SET_ACTION_CONTAINER', actionId: prePickedElement.actionId}
+        : {type: 'SET_PENDING_CONTAINER'}),
       containerContext: {
         containerTag: prePickedElement.tagName,
         containerLabel,
         containerHtml: prePickedElement.containerHtml,
+        identity,
+        identityUnique,
       },
     });
     setPrePickedElement(null);
@@ -277,7 +338,7 @@ export function RecorderPanel() {
 
   const handleAddPrecondition = async (text: string) => {
     const newPrecondition: Precondition = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      id: generateId(),
       name: text,
       order: state.preconditions.length,
     };
@@ -374,6 +435,7 @@ export function RecorderPanel() {
             onAddPrecondition={() => setShowAddPrecondition(true)}
             onAddAssertion={handleAddExpectedResult}
             onAddManualStep={() => setShowAddStep(true)}
+            onCaptureValue={() => startPick(true)}
             onPickContainerPre={handlePickContainerPre}
             onClearPendingContainer={handleClearPendingContainer}
             onEditAssertion={handleEditAssertion}
@@ -408,7 +470,7 @@ export function RecorderPanel() {
             onPickContainer={actionHandlers.onPickContainer}
             onRemoveContainer={actionHandlers.onRemoveContainer}
             baseUrl={state.baseUrl}
-            onPickElement={(pageUrl) => send({type: 'ELEMENT_PICKER_START', pageUrl})}
+            onPickElement={(pageUrl) => startPick(false, pageUrl)}
             pickedElement={pickedElement}
             onClearPickedElement={() => {
               setPickedElement(null);
@@ -451,6 +513,7 @@ export function RecorderPanel() {
           pendingContainer={state.pendingContainer}
           onPickContainer={handlePickContainerPre}
           onClearContainer={handleClearPendingContainer}
+          vault={buildVault(state.actions)}
         />
       )}
 
@@ -469,6 +532,7 @@ export function RecorderPanel() {
           }}
           onPickElement={handlePickElement}
           pickedElement={pickedElement}
+          vault={buildVault(state.actions, editingAssertionState.actionId)}
         />
       )}
 
@@ -486,6 +550,8 @@ export function RecorderPanel() {
         <ContainerNameModal
           tagName={prePickedElement.tagName}
           suggestedName={prePickedElement.suggestedName}
+          candidates={prePickedElement.identityCandidates}
+          similar={prePickedElement.similarContainers}
           onConfirm={handleConfirmPendingContainer}
           onCancel={handleCancelPendingContainer}
         />

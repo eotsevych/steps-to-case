@@ -7,6 +7,9 @@ import {Button} from './components/ui/button';
 import {Input} from './components/ui/input';
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from './components/ui/dialog';
 import {Label} from './components/ui/label';
+import {buildVault, pageActions} from '../lib/vault';
+import {generateId} from '../lib/recordingImport';
+import { containerText } from '../lib/stepName';
 import {ArrowLeft, RotateCcw, FileDown, Plus, GripVertical, Pencil, X, Check} from 'lucide-react';
 
 interface Props {
@@ -39,10 +42,6 @@ interface Props {
   pendingContainer?: ContainerContext;
   onPickContainerPre?: (pageUrl?: string) => void;
   onClearPendingContainer?: () => void;
-}
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /** Page context for a step added in the organizer: the page's URL plus the domain its recorded steps came from. */
@@ -889,7 +888,7 @@ export function StepOrganizer({
               {pendingContainer ? (
                 <div className="flex items-center gap-2 p-2 bg-secondary rounded-md border border-amber-300">
                   <span className="text-sm flex-1 truncate text-foreground">
-                    {pendingContainer.containerLabel}
+                    {containerText(pendingContainer)}
                   </span>
                   <Button variant="ghost" size="icon" onClick={onClearPendingContainer} title="Clear container"><X className="w-3 h-3" /></Button>
                 </div>
@@ -930,6 +929,8 @@ export function StepOrganizer({
           pendingContainer={pendingContainer}
           onPickContainer={() => onPickContainerPre?.(pageUrlOf(addAssertionPageId))}
           onClearContainer={() => onClearPendingContainer?.()}
+          // The new assertion goes to the end of its page, so later pages' values are not offered
+          vault={buildVault(pageActions(pages.filter(g => g.order <= (pages.find(p => p.id === addAssertionPageId)?.order ?? 0))))}
         />
       )}
 
@@ -947,6 +948,7 @@ export function StepOrganizer({
             pageUrlOf(pages.find(g => g.actions.some(a => a.id === editingAssertionActionId))?.id ?? null),
           )}
           pickedElement={pickedElement}
+          vault={buildVault(pageActions(pages), editingAssertionActionId)}
         />
       )}
 
